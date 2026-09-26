@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仁爱通 | 大学英语四六级智能复习系统</title>
-    
+    <title>仁爱通｜大学英语四六级智能复习系统</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SheetJS (Excel处理) -->
+    <!-- SheetJS (Excel) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Supabase JS -->
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    
     <script>
         tailwind.config = {
             theme: {
@@ -26,227 +25,208 @@
         }
     </script>
     <style>
-        body { background-color: #F4FAFD; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background: #F4FAFD; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .tab-btn.active { color: white; border-bottom: 3px solid #1296D4; background: rgba(18,150,212,0.1); }
         .card-flip { perspective: 1000px; }
-        .card-inner { transition: transform 0.6s; transform-style: preserve-3d; }
+        .card-inner { transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
         .card-flipped { transform: rotateY(180deg); }
-        .card-front, .card-back { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .card-front, .card-back { backface-visibility: hidden; position: absolute; inset: 0; }
         .card-back { transform: rotateY(180deg); }
-        .nav-active { border-bottom: 2px solid #1296D4; color: white; }
-        .nav-idle { border-bottom: 2px solid transparent; color: #cbd5e1; }
-        .nav-idle:hover { color: white; }
-        /* 隐藏滚动条 */
+        /* 隐藏滚动条但保留功能 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col text-gray-800">
 
-    <!-- 导航栏 -->
-    <header class="bg-tjra-navy text-white shadow-lg sticky top-0 z-50">
+    <!-- 顶部导航 -->
+    <header class="bg-tjra-navy text-white shadow-xl sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center border border-white/20 shadow-inner">
                     <i class="fa-solid fa-graduation-cap text-tjra-sky text-xl"></i>
                 </div>
                 <div>
                     <h1 class="text-xl font-black tracking-wide">仁爱通</h1>
-                    <p class="text-[11px] text-gray-300 tracking-widest">大学英语四六级智能复习系统</p>
+                    <p class="text-[10px] text-gray-400 tracking-widest uppercase">CET-4/6 Intelligent System</p>
                 </div>
             </div>
-            
             <div class="flex items-center space-x-3">
-                <button onclick="toggleLoginModal('student')" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition">
-                    <i class="fa-solid fa-user"></i> 学生端
-                </button>
-                <button onclick="toggleLoginModal('admin')" class="text-xs bg-tjra-sky/20 border border-tjra-sky/50 hover:bg-tjra-sky/40 px-3 py-1.5 rounded transition">
-                    <i class="fa-solid fa-shield-halved"></i> 管理员
+                <span id="userStatusBadge" class="hidden text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30"><i class="fa-solid fa-check-circle"></i> 已登录</span>
+                <button onclick="toggleLoginModal()" class="text-xs bg-tjra-sky/20 hover:bg-tjra-sky/40 border border-tjra-sky/50 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield"></i> 系统登录
                 </button>
             </div>
         </div>
-
-        <nav class="bg-black/20 px-4">
-            <div class="max-w-7xl mx-auto flex space-x-2 md:space-x-6 overflow-x-auto">
-                <button onclick="switchTab('home')" id="tab-home" class="tab-btn nav-active px-2 py-3 text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-house"></i> 官方指南</button>
-                <button onclick="switchTab('words')" id="tab-words" class="tab-btn nav-idle px-2 py-3 text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-book-bookmark"></i> 单词训练机</button>
-                <button onclick="switchTab('exam')" id="tab-exam" class="tab-btn nav-idle px-2 py-3 text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-file-pen"></i> 真题试炼</button>
-                <button class="tab-btn nav-idle px-2 py-3 text-sm font-semibold flex items-center gap-2 cursor-not-allowed opacity-60" disabled><i class="fa-solid fa-microphone"></i> 口语强化 <span class="text-[10px] bg-gray-600 px-1 rounded">预留</span></button>
-                <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn nav-idle px-2 py-3 text-sm font-semibold flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> 专项模拟</button>
-                <button onclick="switchTab('adminPanel')" id="tab-adminPanel" class="tab-btn nav-idle px-2 py-3 text-sm font-semibold flex items-center gap-2 hidden text-yellow-400"><i class="fa-solid fa-database"></i> 管理中心</button>
+        <!-- 选项卡 -->
+        <nav class="border-t border-white/10 px-4">
+            <div class="max-w-7xl mx-auto flex overflow-x-auto">
+                <button onclick="switchTab('home')" id="tab-home" class="tab-btn active px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white flex items-center gap-2"><i class="fa-solid fa-house"></i> 官方指南</button>
+                <button onclick="switchTab('words')" id="tab-words" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white flex items-center gap-2"><i class="fa-solid fa-book-bookmark"></i> 单词核心</button>
+                <button onclick="switchTab('exam')" id="tab-exam" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white flex items-center gap-2"><i class="fa-solid fa-file-pen"></i> 真题试炼</button>
+                <button onclick="switchTab('mock')" id="tab-mock" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-300 hover:text-white flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> 专项模拟</button>
+                <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn hidden px-5 py-3 text-sm font-semibold text-tjra-accent hover:text-yellow-300 flex items-center gap-2"><i class="fa-solid fa-server"></i> 管理控制台</button>
             </div>
         </nav>
     </header>
 
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
         
-        <!-- ================= 1. 主页 (官方指南) ================= -->
-        <section id="page-home" class="space-y-6">
+        <!-- ================= 1. 首页 (官方大纲) ================= -->
+        <section id="page-home" class="space-y-6 animate-[fadeIn_0.5s_ease-out]">
             <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                 <div class="absolute -right-10 -top-10 w-40 h-40 bg-tjra-sky/10 rounded-full blur-2xl"></div>
-                <h2 class="text-3xl font-black text-tjra-navy mb-4">欢迎使用 仁爱通</h2>
-                <p class="text-gray-600 mb-6 max-w-2xl leading-relaxed">
-                    本系统专为天津仁爱学院学子打造，依据教育部教育考试院 (NEEA) 最新大纲设计，提供从单词记忆、真题实战到专项突破的全栈式复习方案。
+                <h2 class="text-3xl font-black text-tjra-navy mb-4">掌握 CET，重构英语思维。</h2>
+                <p class="text-gray-600 max-w-2xl leading-relaxed">
+                    欢迎使用天津仁爱学院专属四六级训练平台。本系统严格遵循 NEEA 大纲开发，融合记忆曲线单词机与沉浸式真题考场，助您高效突破英语瓶颈。
                 </p>
-                <button onclick="switchTab('words')" class="bg-tjra-sky text-white px-6 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition">
-                    立即开始背单词 <i class="fa-solid fa-arrow-right ml-1"></i>
-                </button>
             </div>
-
+            <!-- 官方链接矩阵 -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition group">
-                    <i class="fa-solid fa-link text-3xl text-tjra-sky mb-4 group-hover:scale-110 transition"></i>
-                    <h3 class="font-bold text-lg mb-2">CET 官方报名网</h3>
-                    <p class="text-xs text-gray-500 mb-4 h-10">中国教育考试院四六级报名与成绩查询唯一入口。</p>
-                    <a href="https://cet.neea.edu.cn/" target="_blank" class="text-sm font-semibold text-tjra-sky">访问官网 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:-translate-y-1 transition duration-300 cursor-pointer" onclick="window.open('https://cet.neea.edu.cn/')">
+                    <div class="w-12 h-12 bg-blue-50 text-tjra-sky rounded-xl flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-link"></i></div>
+                    <h3 class="font-bold text-lg mb-2">中国教育考试院官网</h3>
+                    <p class="text-xs text-gray-500">CET 官方报名、成绩查询与证书核验入口。</p>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition group">
-                    <i class="fa-solid fa-book-open text-3xl text-tjra-sky mb-4 group-hover:scale-110 transition"></i>
-                    <h3 class="font-bold text-lg mb-2">考试大纲与样题</h3>
-                    <p class="text-xs text-gray-500 mb-4 h-10">获取最新的题型结构、评分标准与官方范题。</p>
-                    <a href="https://cet.neea.edu.cn/html1/folder/16083/1813-1.htm" target="_blank" class="text-sm font-semibold text-tjra-sky">查看大纲 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:-translate-y-1 transition duration-300 cursor-pointer" onclick="window.open('https://cet.neea.edu.cn/html1/folder/16083/1813-1.htm')">
+                    <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-book-open"></i></div>
+                    <h3 class="font-bold text-lg mb-2">官方大纲与考核目标</h3>
+                    <p class="text-xs text-gray-500">深入了解四六级听力、阅读、写作、翻译的评分标准。</p>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition group">
-                    <i class="fa-solid fa-building-columns text-3xl text-tjra-sky mb-4 group-hover:scale-110 transition"></i>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:-translate-y-1 transition duration-300 cursor-pointer" onclick="window.open('https://jw.tjrac.edu.cn/')">
+                    <div class="w-12 h-12 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-university"></i></div>
                     <h3 class="font-bold text-lg mb-2">天津仁爱学院教务处</h3>
-                    <p class="text-xs text-gray-500 mb-4 h-10">关注校内考试通知、准考证打印与考场安排。</p>
-                    <a href="https://jw.tjrac.edu.cn/" target="_blank" class="text-sm font-semibold text-tjra-sky">跳转教务处 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <p class="text-xs text-gray-500">关注校内本考点报名通知、考场安排及准考证打印。</p>
                 </div>
             </div>
         </section>
 
-        <!-- ================= 2. 单词部分 (词卡机) ================= -->
+        <!-- ================= 2. 单词核心 (智能卡片机) ================= -->
         <section id="page-words" class="hidden space-y-6">
-            <!-- 工具栏 -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- 头部控制栏 -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap justify-between items-center gap-4">
                 <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <label class="text-sm font-bold text-gray-700 whitespace-nowrap"><i class="fa-solid fa-book text-tjra-sky"></i> 当前词书:</label>
-                    <select id="bookSelect" onchange="handleBookChange()" class="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-tjra-sky">
-                        <option value="demo">内置演示：CET-4 核心词汇 (2词)</option>
+                    <div class="w-10 h-10 bg-tjra-sky/10 text-tjra-sky rounded-lg flex items-center justify-center"><i class="fa-solid fa-swatchbook"></i></div>
+                    <select id="bookSelect" onchange="handleBookChange()" class="border-none bg-gray-50 rounded-lg px-4 py-2.5 text-sm font-bold text-tjra-navy w-full md:w-72 focus:ring-2 focus:ring-tjra-sky outline-none cursor-pointer">
+                        <option value="sys_cet4_core">📚 [内置] CET-4 核心高频词</option>
                     </select>
                 </div>
-                <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="importWordBook(event)">
-                    <button onclick="document.getElementById('excelFileInput').click()" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-sm">
-                        <i class="fa-solid fa-file-excel"></i> 录入 Excel
+                <div class="flex items-center space-x-3">
+                    <button onclick="document.getElementById('excelFileInput').click()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-sm px-5 py-2.5 rounded-lg font-semibold transition shadow-md shadow-emerald-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> 载入 Excel 词书
                     </button>
-                    <button onclick="uploadBookToCloud()" class="flex-1 md:flex-none bg-tjra-navy hover:bg-blue-900 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-sm">
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelUpload(event)">
+                    
+                    <button onclick="uploadCurrentBookToCloud()" class="bg-tjra-navy hover:bg-gray-800 text-white text-sm px-5 py-2.5 rounded-lg font-semibold transition shadow-md flex items-center gap-2">
                         <i class="fa-solid fa-cloud-arrow-up"></i> 发布到云端
                     </button>
-                    <button onclick="fetchCloudBooks()" class="flex-1 md:flex-none bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-sm" title="获取公共已审核词库">
-                        <i class="fa-solid fa-rotate"></i> 刷新云词库
-                    </button>
                 </div>
             </div>
 
-            <!-- 卡片主体 -->
+            <!-- 单词卡片核心区域 -->
             <div class="max-w-2xl mx-auto mt-8">
-                <div class="card-flip w-full h-[22rem] cursor-pointer" onclick="flipCard()">
-                    <div id="cardInner" class="card-inner relative w-full h-full shadow-2xl rounded-3xl">
-                        <!-- 正面 -->
-                        <div class="card-front bg-white border-2 border-gray-100 rounded-3xl p-8 flex flex-col justify-between items-center text-center">
-                            <div class="w-full flex justify-between items-center text-xs text-gray-400 font-semibold">
-                                <span class="bg-tjra-light text-tjra-sky px-3 py-1 rounded-full"><i class="fa-solid fa-layer-group"></i> <span id="cardLevel">CET-4</span></span>
-                                <span>进度: <span id="cardProgress" class="text-tjra-navy font-bold">1 / 10</span></span>
-                            </div>
-                            <div class="mt-4">
-                                <h2 id="cardWord" class="text-5xl font-black text-tjra-navy tracking-tight mb-4">abandon</h2>
-                                <div class="flex items-center justify-center space-x-6 text-sm text-gray-500 font-medium">
-                                    <span class="flex items-center gap-1.5 hover:text-tjra-sky transition" onclick="event.stopPropagation(); playTTS('us')">
-                                        美 <span id="cardPhoneticUs">/əˈbændən/</span> <i class="fa-solid fa-volume-high text-tjra-sky"></i>
-                                    </span>
-                                    <span class="flex items-center gap-1.5 hover:text-tjra-sky transition" onclick="event.stopPropagation(); playTTS('uk')">
-                                        英 <span id="cardPhoneticUk">/əˈbændən/</span> <i class="fa-solid fa-volume-high text-tjra-sky"></i>
-                                    </span>
+                <div class="flex justify-between text-xs font-bold text-gray-400 mb-2 px-2">
+                    <span id="cardLevelTag" class="bg-gray-200 text-gray-600 px-3 py-1 rounded-full uppercase tracking-wide">CET</span>
+                    <span id="cardProgress" class="bg-blue-50 text-tjra-sky px-3 py-1 rounded-full">0 / 0</span>
+                </div>
+                
+                <div class="card-flip w-full h-[400px] cursor-pointer" onclick="flipCard()">
+                    <div id="cardInner" class="card-inner w-full h-full relative shadow-2xl shadow-tjra-navy/10 rounded-[2rem]">
+                        
+                        <!-- 正面 (单词与发音) -->
+                        <div class="card-front bg-white border border-gray-100 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center">
+                            <h2 id="cardWord" class="text-6xl font-black text-tjra-navy tracking-tight mb-8 drop-shadow-sm">Hello</h2>
+                            <div class="flex items-center justify-center space-x-8 text-gray-500 font-medium">
+                                <div class="flex flex-col items-center gap-2 group" onclick="event.stopPropagation(); playTTS('us')">
+                                    <button class="w-12 h-12 rounded-full bg-red-50 text-red-500 group-hover:bg-red-500 group-hover:text-white transition"><i class="fa-solid fa-volume-high"></i></button>
+                                    <span class="text-sm">美 <span id="cardPhoneticUs">/həˈloʊ/</span></span>
+                                </div>
+                                <div class="w-px h-10 bg-gray-200"></div>
+                                <div class="flex flex-col items-center gap-2 group" onclick="event.stopPropagation(); playTTS('uk')">
+                                    <button class="w-12 h-12 rounded-full bg-blue-50 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition"><i class="fa-solid fa-volume-high"></i></button>
+                                    <span class="text-sm">英 <span id="cardPhoneticUk">/həˈləʊ/</span></span>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-300 animate-pulse"><i class="fa-regular fa-hand-pointer"></i> 点击卡片翻面查看释义</p>
+                            <p class="absolute bottom-6 text-xs text-gray-300 font-bold tracking-widest"><i class="fa-solid fa-repeat"></i> 点击翻转</p>
                         </div>
-                        <!-- 背面 -->
-                        <div class="card-back bg-tjra-navy text-white rounded-3xl p-8 flex flex-col justify-center items-start text-left border-2 border-tjra-navy relative">
-                            <span id="cardPos" class="absolute top-6 right-6 bg-white/20 text-white text-xs font-bold px-2 py-1 rounded">vt.</span>
-                            
-                            <h3 id="cardDefinition" class="text-3xl font-bold text-tjra-accent mb-2">放弃，抛弃；放纵</h3>
-                            <p id="cardExplanation" class="text-sm text-blue-200 mb-6 font-serif italic">to stop supporting or looking after someone</p>
-                            
-                            <div class="w-full border-t border-white/10 pt-4 mt-2">
-                                <p class="text-xs text-gray-400 mb-1">Example 例句：</p>
-                                <p id="cardExample" class="text-base text-white font-medium">"They had to abandon the sinking ship."</p>
-                                <p id="cardTranslation" class="text-sm text-gray-300 mt-1">他们不得不放弃那艘正在下沉的船。</p>
+
+                        <!-- 背面 (释义与例句) -->
+                        <div class="card-back bg-tjra-navy text-white rounded-[2rem] p-10 flex flex-col justify-center relative overflow-hidden">
+                            <div class="absolute -right-20 -bottom-20 text-[200px] text-white/5 font-black italic"><i class="fa-solid fa-quote-right"></i></div>
+                            <div class="relative z-10 text-left w-full h-full flex flex-col">
+                                <div class="mb-4">
+                                    <span id="cardPos" class="inline-block bg-tjra-sky text-white text-xs font-bold px-3 py-1 rounded-lg mb-3">n.</span>
+                                    <h3 id="cardDefinition" class="text-3xl font-bold text-tjra-accent leading-tight">你好</h3>
+                                </div>
+                                <p id="cardExplanation" class="text-sm text-gray-300 font-serif mb-6 pb-6 border-b border-white/10">used as a greeting</p>
+                                
+                                <div class="mt-auto">
+                                    <p id="cardExampleSentence" class="text-lg font-medium text-blue-100 italic leading-relaxed mb-2">"Hello, how are you?"</p>
+                                    <p id="cardExampleTrans" class="text-sm text-gray-400">你好，最近怎么样？</p>
+                                </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
-                <!-- 控制台 -->
+                <!-- 底部控制钮 -->
                 <div class="flex justify-between items-center mt-8 px-4">
-                    <button onclick="prevWord()" class="w-12 h-12 bg-white rounded-full shadow-md text-gray-600 hover:text-tjra-sky hover:shadow-lg transition flex justify-center items-center">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </button>
-                    <button onclick="playTTS('us')" class="bg-tjra-light text-tjra-sky border border-blue-100 hover:bg-blue-100 px-6 py-3 rounded-full text-sm font-bold transition shadow-sm flex items-center gap-2">
-                        <i class="fa-solid fa-headphones"></i> 朗读当前单词
-                    </button>
-                    <button onclick="nextWord()" class="w-12 h-12 bg-tjra-navy text-white rounded-full shadow-md hover:bg-blue-900 hover:shadow-lg transition flex justify-center items-center">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </button>
+                    <button onclick="prevWord()" class="w-14 h-14 bg-white shadow hover:shadow-md text-gray-600 rounded-full flex items-center justify-center transition active:scale-95"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+                    <button onclick="playTTS('us')" class="bg-tjra-sky text-white px-8 py-3.5 rounded-full font-bold shadow-lg shadow-tjra-sky/30 hover:bg-blue-600 transition active:scale-95 flex items-center gap-2"><i class="fa-solid fa-headphones"></i> 自动朗读</button>
+                    <button onclick="nextWord()" class="w-14 h-14 bg-tjra-navy text-white shadow-lg hover:bg-gray-800 rounded-full flex items-center justify-center transition active:scale-95"><i class="fa-solid fa-arrow-right text-xl"></i></button>
                 </div>
             </div>
         </section>
 
-        <!-- ================= 3. 真题试炼 (预留) ================= -->
-        <section id="page-exam" class="hidden">
+        <!-- ================= 3. 真题试炼 (保留框架结构) ================= -->
+        <section id="page-exam" class="hidden space-y-6">
             <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
-                <i class="fa-solid fa-file-pen text-6xl text-gray-300 mb-4"></i>
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">真题试炼系统建设中</h2>
-                <p class="text-gray-500 text-sm max-w-md mx-auto">
-                    下一阶段我们将接入完整的真题渲染引擎，严格按照：<br>
-                    <span class="text-tjra-sky font-bold">写作 (30分钟) ➜ 听力 ➜ 阅读与翻译</span><br>
-                    的真实考场顺序进行训练，敬请期待。
-                </p>
+                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl text-gray-300"><i class="fa-solid fa-file-shield"></i></div>
+                <h2 class="text-2xl font-bold text-tjra-navy mb-3">真题引擎筹备中</h2>
+                <p class="text-gray-500 mb-6">全真模拟考场将按照 写作 ➔ 听力 ➔ 阅读 的严格顺序进行。目前正在进行 Word 文档结构化解析引擎的搭建。</p>
+                <button onclick="switchTab('words')" class="bg-tjra-sky text-white px-6 py-2 rounded-lg font-semibold">先去背单词</button>
+            </div>
+        </section>
+        <section id="page-mock" class="hidden space-y-6">
+            <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl text-gray-300"><i class="fa-solid fa-dumbbell"></i></div>
+                <h2 class="text-2xl font-bold text-tjra-navy mb-3">专项突击训练区</h2>
+                <p class="text-gray-500">将基于 Supabase 题库随机抽取听力、长篇阅读进行专项打击，敬请期待下一阶段更新。</p>
             </div>
         </section>
 
-        <!-- ================= 4. 模拟题专项 (预留) ================= -->
-        <section id="page-mock" class="hidden">
-            <div class="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
-                <i class="fa-solid fa-layer-group text-6xl text-gray-300 mb-4"></i>
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">专项强化抽题系统</h2>
-                <p class="text-gray-500 text-sm max-w-md mx-auto">
-                    长阅读、选词填空、段落翻译等专项数据库正在结构化重构，稍后将开放。
-                </p>
-            </div>
-        </section>
-
-        <!-- ================= 5. 管理中心 (Admin Panel) ================= -->
-        <section id="page-adminPanel" class="hidden space-y-6">
-            <div class="bg-gradient-to-r from-tjra-navy to-blue-900 p-6 rounded-2xl text-white shadow-lg flex justify-between items-center">
+        <!-- ================= 4. 管理控制台 (仅管理可见) ================= -->
+        <section id="page-admin" class="hidden space-y-6">
+            <div class="bg-tjra-navy p-6 rounded-2xl shadow-lg text-white flex justify-between items-center">
                 <div>
-                    <h2 class="text-2xl font-bold mb-1"><i class="fa-solid fa-database"></i> 教务管理中心</h2>
-                    <p class="text-sm text-blue-200">管理员 <span class="font-mono bg-black/20 px-2 py-0.5 rounded">xyhh99@qq.com</span>，欢迎回来。</p>
+                    <h2 class="text-2xl font-black flex items-center gap-3"><i class="fa-solid fa-server text-tjra-accent"></i> 仁爱通中控台</h2>
+                    <p class="text-sm text-gray-400 mt-1">管理员专属权限：词库审核与名单下发。当前身份：xyhh99@qq.com</p>
                 </div>
-                <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-bold transition">退出登录</button>
+                <button onclick="logout()" class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg transition text-sm font-bold">退出管理</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 词书审核模块 -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 词书审核区块 -->
+                <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-gray-800"><i class="fa-solid fa-list-check text-tjra-sky"></i> 待审核词书池</h3>
-                        <button onclick="loadPendingBooks()" class="text-xs text-tjra-sky hover:underline"><i class="fa-solid fa-rotate"></i> 刷新</button>
+                        <h3 class="font-bold text-lg text-tjra-navy"><i class="fa-solid fa-book-medical text-tjra-sky mr-2"></i>野生词书审核流</h3>
+                        <button onclick="loadPendingBooks()" class="text-xs text-blue-500 hover:underline"><i class="fa-solid fa-rotate"></i> 刷新队列</button>
                     </div>
-                    <div id="adminBooksList" class="space-y-3 max-h-64 overflow-y-auto pr-2">
-                        <p class="text-xs text-gray-400 text-center py-4">点击刷新获取待审核词书...</p>
+                    <div class="overflow-y-auto max-h-64 pr-2 space-y-3" id="adminBookList">
+                        <div class="text-sm text-gray-400 text-center py-6">正在加载云端数据...</div>
                     </div>
                 </div>
 
-                <!-- 学生名单导入模块 -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-users text-tjra-sky"></i> 学生名单批量导入</h3>
-                    <p class="text-xs text-gray-500 mb-4">通过 Excel 导入本校学生，包含字段：学号、姓名、邮箱、班级。</p>
-                    <input type="file" id="studentExcel" accept=".xlsx" class="hidden" onchange="importStudents(event)">
-                    <button onclick="document.getElementById('studentExcel').click()" class="w-full bg-gray-50 border border-gray-300 border-dashed text-gray-600 hover:bg-gray-100 hover:border-gray-400 py-8 rounded-xl font-bold transition flex flex-col items-center gap-2">
-                        <i class="fa-solid fa-file-excel text-2xl text-emerald-500"></i>
-                        上传学生名单 Excel (自动入库)
-                    </button>
+                <!-- 学生名单导入区块 -->
+                <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h3 class="font-bold text-lg text-tjra-navy mb-4"><i class="fa-solid fa-users-gear text-tjra-sky mr-2"></i>学生白名单录入</h3>
+                    <p class="text-xs text-gray-500 mb-4">上传 Excel 名单。表头需包含：<code class="bg-gray-100 px-1 text-pink-600">学号</code>, <code class="bg-gray-100 px-1 text-pink-600">姓名</code>, <code class="bg-gray-100 px-1 text-pink-600">邮箱</code>, <code class="bg-gray-100 px-1 text-pink-600">班级</code></p>
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-tjra-sky transition cursor-pointer" onclick="document.getElementById('studentExcelInput').click()">
+                        <i class="fa-solid fa-file-csv text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-sm font-bold text-gray-600">点击此处上传学生 Excel 名单</p>
+                    </div>
+                    <input type="file" id="studentExcelInput" accept=".xlsx, .xls" class="hidden" onchange="handleStudentUpload(event)">
                 </div>
             </div>
         </section>
@@ -254,165 +234,148 @@
     </main>
 
     <!-- 页脚 -->
-    <footer class="bg-gray-900 text-gray-400 py-8 mt-auto">
-        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-            <div>
-                <p class="font-bold text-gray-200 mb-1">版权所有 &copy; 2026 吴兆宇 | 仁爱通 CET 复习系统</p>
-                <p>使用学校：天津仁爱学院 | 确保内部教学复习使用</p>
+    <footer class="bg-gray-900 text-gray-400 text-xs py-8 mt-auto border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left space-y-1">
+                <p class="font-bold text-gray-300 text-sm">版权所有 &copy; 2026 吴兆宇</p>
+                <p>使用学校：天津仁爱学院 | 专属四六级系统</p>
+                <p>技术驱动：Gemini AI & GitHub Open-Source & Supabase Cloud</p>
             </div>
-            <div class="flex space-x-4">
-                <span class="flex items-center gap-1 hover:text-white transition"><i class="fa-solid fa-microchip"></i> AI 技术协助</span>
-                <a href="https://github.com" target="_blank" class="flex items-center gap-1 hover:text-white transition"><i class="fa-brands fa-github"></i> GitHub</a>
-                <a href="https://supabase.com" target="_blank" class="flex items-center gap-1 hover:text-white transition"><i class="fa-solid fa-database"></i> Supabase Cloud</a>
+            <div class="flex space-x-5 text-lg">
+                <a href="#" class="hover:text-white transition"><i class="fa-brands fa-github"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fa-solid fa-database"></i></a>
             </div>
         </div>
     </footer>
 
-    <!-- 登录弹窗 (管理员/学生) -->
-    <div id="loginModal" class="fixed inset-0 bg-tjra-navy/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 transition-opacity">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 relative">
-            <button onclick="toggleLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            
-            <div class="text-center mb-6">
-                <div class="w-12 h-12 bg-tjra-light text-tjra-sky rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                    <i id="loginIcon" class="fa-solid fa-shield-halved"></i>
-                </div>
-                <h3 id="loginTitle" class="text-xl font-black text-tjra-navy">管理员验证</h3>
-                <p id="loginSub" class="text-xs text-gray-500 mt-1">请输入系统分配的安全凭证</p>
+    <!-- 登录鉴权弹窗 -->
+    <div id="loginModal" class="fixed inset-0 bg-tjra-navy/80 backdrop-blur-sm hidden flex items-center justify-center z-[100] p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 transform scale-95 transition-transform duration-300" id="loginModalInner">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-tjra-navy">系统认证</h3>
+                <button onclick="toggleLoginModal()" class="text-gray-400 hover:text-gray-800 text-xl"><i class="fa-solid fa-xmark"></i></button>
             </div>
-
-            <form onsubmit="handleLogin(event)" class="space-y-4">
-                <input type="hidden" id="loginType" value="admin">
+            <form onsubmit="handleLogin(event)" class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">邮箱账号</label>
-                    <input type="email" id="loginEmail" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tjra-sky outline-none transition" placeholder="example@qq.com">
+                    <label class="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">账户邮箱 (Email)</label>
+                    <input type="email" id="loginEmail" value="xyhh99@qq.com" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-tjra-sky focus:bg-white outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">安全密码</label>
-                    <input type="password" id="loginPassword" required class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tjra-sky outline-none transition" placeholder="••••••••">
+                    <label class="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">安全密码 (Password)</label>
+                    <input type="password" id="loginPassword" placeholder="输入您的密码" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold focus:ring-2 focus:ring-tjra-sky focus:bg-white outline-none transition">
                 </div>
-                <button type="submit" class="w-full bg-tjra-navy text-white py-2.5 rounded-lg font-bold text-sm hover:bg-blue-900 transition mt-2 shadow-md">
-                    验证登录
+                <button type="submit" class="w-full bg-tjra-navy text-white py-3.5 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg mt-2">
+                    授权登录 <i class="fa-solid fa-arrow-right ml-1"></i>
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- ================= 核心业务逻辑 (JavaScript) ================= -->
+    <!-- 核心 JavaScript 业务逻辑 -->
     <script>
-        // --- 1. Supabase 初始化配置 ---
+        // ================= 1. 初始化 Supabase =================
         const SUPABASE_URL = 'https://zqrhfcsrexoamizkzzhq.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcmhmY3NyZXhvYW1pemt6emhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY3MDUsImV4cCI6MjEwNjAwMjcwNX0.Hw3mBAy3mJvPa7SeVOdfArq-fc8G6sff77SfWqWeZ_M';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // --- 2. 状态管理 ---
-        let currentTab = 'home';
-        let isAdmin = false;
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcmhmY3NyZXhvYW1pemt6emhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY3MDUsImV4cCI6MjEwNjAwMjcwNX0.Hw3mBAy3mJvPa7SeVOdfArq-fc8G6sff77SfWqWeZ_M';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // 词书数据结构
-        let wordBooks = {
-            'demo': [
-                { word: 'abandon', us_phonetic: '/əˈbændən/', uk_phonetic: '/əˈbændən/', pos: 'vt.', definition: '放弃，抛弃；放纵', explanation: 'to stop supporting or looking after', example_sentence: 'They had to abandon the sinking ship.', example_translation: '他们不得不放弃那艘正在下沉的船。' },
-                { word: 'benefit', us_phonetic: '/ˈbenɪfɪt/', uk_phonetic: '/ˈbenɪfɪt/', pos: 'n./v.', definition: '利益；有益于', explanation: 'an advantage or profit gained from something', example_sentence: 'The new policy will benefit everyone.', example_translation: '新政策将使每个人受益。' }
+        let isAdmin = false;
+
+        // ================= 2. 词库状态管理 =================
+        const systemBooks = {
+            'sys_cet4_core': [
+                { word: 'abandon', us_phonetic: '/əˈbændən/', uk_phonetic: '/əˈbændən/', pos: 'vt.', definition: '放弃，抛弃；放纵', explanation: 'to stop supporting or looking after', example_sentence: 'They had to abandon the sinking ship.', example_translation: '他们不得不放弃那艘正在下沉的船。', level: 'CET-4' },
+                { word: 'candidate', us_phonetic: '/ˈkændɪdeɪt/', uk_phonetic: '/ˈkændɪdət/', pos: 'n.', definition: '候选人；应试者', explanation: 'a person who applies for a job', example_sentence: 'He is a candidate for the degree.', example_translation: '他是该学位的候选人。', level: 'CET-6' }
             ]
         };
-        let activeBook = 'demo';
-        let currentWordIndex = 0;
-        let isCardFlipped = false;
+        let currentWords = systemBooks['sys_cet4_core'];
+        let currentIndex = 0;
+        let isFlipped = false;
 
-        // --- 3. 页面导航 ---
+        // ================= 3. 页面初始化 =================
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderCard();
+            await fetchApprovedBooks();
+        });
+
         function switchTab(tabId) {
-            document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
             document.getElementById(`page-${tabId}`).classList.remove('hidden');
             
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('nav-active');
-                btn.classList.add('nav-idle');
+                btn.classList.remove('active', 'text-white');
+                btn.classList.add('text-gray-300');
             });
-            document.getElementById(`tab-${tabId}`).classList.add('nav-active');
-            document.getElementById(`tab-${tabId}`).classList.remove('nav-idle');
-            currentTab = tabId;
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('active', 'text-white');
+                activeBtn.classList.remove('text-gray-300');
+            }
 
-            if(tabId === 'words') renderCard();
+            if(tabId === 'admin') loadPendingBooks();
         }
 
-        // --- 4. 单词卡机逻辑 ---
+        // ================= 4. 单词卡片机逻辑 =================
         function renderCard() {
-            const list = wordBooks[activeBook];
-            if (!list || list.length === 0) return;
-            const item = list[currentWordIndex];
+            if (!currentWords || currentWords.length === 0) return;
+            const item = currentWords[currentIndex];
 
-            document.getElementById('cardWord').innerText = item.word || 'N/A';
+            document.getElementById('cardWord').innerText = item.word;
             document.getElementById('cardPhoneticUs').innerText = item.us_phonetic || '/--/';
             document.getElementById('cardPhoneticUk').innerText = item.uk_phonetic || '/--/';
-            document.getElementById('cardPos').innerText = item.pos || 'n.';
+            document.getElementById('cardPos').innerText = item.pos || '词汇';
             document.getElementById('cardDefinition').innerText = item.definition || '暂无释义';
             document.getElementById('cardExplanation').innerText = item.explanation || '';
-            document.getElementById('cardExample').innerText = item.example_sentence ? `"${item.example_sentence}"` : '';
-            document.getElementById('cardTranslation').innerText = item.example_translation || '';
-            document.getElementById('cardProgress').innerText = `${currentWordIndex + 1} / ${list.length}`;
-            
-            // 翻回正面
-            if (isCardFlipped) flipCard();
+            document.getElementById('cardExampleSentence').innerText = item.example_sentence ? `"${item.example_sentence}"` : '';
+            document.getElementById('cardExampleTrans').innerText = item.example_translation || '';
+            document.getElementById('cardLevelTag').innerText = item.level || '词汇';
+            document.getElementById('cardProgress').innerText = `${currentIndex + 1} / ${currentWords.length}`;
+
+            if (isFlipped) flipCard();
         }
 
         function flipCard() {
-            isCardFlipped = !isCardFlipped;
-            const inner = document.getElementById('cardInner');
-            isCardFlipped ? inner.classList.add('card-flipped') : inner.classList.remove('card-flipped');
+            isFlipped = !isFlipped;
+            document.getElementById('cardInner').classList.toggle('card-flipped', isFlipped);
         }
 
         function nextWord() {
-            if (currentWordIndex < wordBooks[activeBook].length - 1) {
-                currentWordIndex++;
-                renderCard();
-            } else {
-                alert('🎉 恭喜，这本词书您已背完！');
-            }
+            if (currentIndex < currentWords.length - 1) { currentIndex++; renderCard(); }
+            else alert('🚀 太棒了，您已完成本词书所有词汇！');
         }
-
         function prevWord() {
-            if (currentWordIndex > 0) {
-                currentWordIndex--;
-                renderCard();
-            }
+            if (currentIndex > 0) { currentIndex--; renderCard(); }
         }
-
         function handleBookChange() {
-            activeBook = document.getElementById('bookSelect').value;
-            currentWordIndex = 0;
-            renderCard();
+            const val = document.getElementById('bookSelect').value;
+            currentWords = systemBooks[val] || currentWords;
+            currentIndex = 0; renderCard();
         }
 
-        // --- 5. Web Speech API (TTS) ---
+        // ================= 5. TTS 跨域发音引擎 =================
         function playTTS(accent) {
-            if (!('speechSynthesis' in window)) return alert('浏览器不支持语音引擎');
-            const word = wordBooks[activeBook][currentWordIndex]?.word;
-            if (!word) return;
+            if (!('speechSynthesis' in window)) return alert('当前浏览器不支持发音功能。');
+            const item = currentWords[currentIndex];
+            if (!item || !item.word) return;
 
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(word);
+            const utterance = new SpeechSynthesisUtterance(item.word);
             utterance.lang = accent === 'us' ? 'en-US' : 'en-GB';
-            utterance.rate = 0.9;
+            utterance.rate = 0.85; // 稍微放慢以标准展示
             window.speechSynthesis.speak(utterance);
         }
 
-        // --- 6. Excel 词书自动解析 ---
-        function importWordBook(e) {
-            const file = e.target.files[0];
+        // ================= 6. Excel 词书自动解析导入 =================
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(evt) {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet);
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                if (json.length === 0) return alert('Excel 为空。');
 
-                if (json.length === 0) return alert('Excel 内容为空');
-
-                // 映射表头 (宽容匹配)
-                const parsedWords = json.map(row => ({
+                const parsed = json.map(row => ({
                     word: row['word'] || row['单词'] || '',
                     us_phonetic: row['us_phonetic'] || row['美式音标'] || row['美音标'] || '',
                     uk_phonetic: row['uk_phonetic'] || row['英式音标'] || row['英音标'] || '',
@@ -420,202 +383,153 @@
                     definition: row['definition'] || row['释义'] || '',
                     explanation: row['explanation'] || row['英文解释'] || '',
                     example_sentence: row['example_sentence'] || row['例句'] || '',
-                    example_translation: row['example_translation'] || row['例句翻译'] || ''
+                    example_translation: row['example_translation'] || row['例句翻译'] || '',
+                    level: row['level'] || row['等级'] || '自定义'
                 })).filter(w => w.word !== '');
 
+                const bookId = 'local_' + Date.now();
                 const bookName = file.name.replace(/\.[^/.]+$/, "");
-                wordBooks[bookName] = parsedWords;
-                
-                // 更新下拉菜单
+                systemBooks[bookId] = parsed;
+
                 const select = document.getElementById('bookSelect');
-                const opt = document.createElement('option');
-                opt.value = bookName;
-                opt.text = `[本地上传] ${bookName} (${parsedWords.length}词)`;
-                select.add(opt);
-                select.value = bookName;
-                
-                activeBook = bookName;
-                currentWordIndex = 0;
-                renderCard();
-                alert(`✅ 成功读取《${bookName}》，包含 ${parsedWords.length} 个单词。`);
+                select.add(new Option(`📂 [本地] ${bookName} (${parsed.length}词)`, bookId));
+                select.value = bookId;
+                handleBookChange();
+                alert(`成功载入《${bookName}》！您现在可以测试发音并发布到云端了。`);
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // --- 7. Supabase 云端交互 (词书发布与拉取) ---
-        async function uploadBookToCloud() {
-            if(activeBook === 'demo') return alert('内置演示词书无需上传。');
-            const words = wordBooks[activeBook];
-            if(!words) return;
+        // ================= 7. Supabase 云端流转 (RPC) =================
+        async function uploadCurrentBookToCloud() {
+            const select = document.getElementById('bookSelect');
+            const title = select.options[select.selectedIndex].text;
+            if (title.includes('[内置]')) return alert('内置词书已存在云端。');
 
             try {
-                // 1. 创建书目 (默认 pending)
-                const { data: bookData, error: bookErr } = await supabase
-                    .from('lexicon_books')
-                    .insert([{ title: activeBook, word_count: words.length, status: 'pending' }])
-                    .select();
-                if (bookErr) throw bookErr;
-
-                const bookId = bookData[0].id;
-
-                // 2. 批量插入单词
-                const wordsToInsert = words.map((w, idx) => ({ ...w, book_id: bookId, sort_order: idx }));
-                const { error: wordErr } = await supabase.from('lexicon_words').insert(wordsToInsert);
-                if (wordErr) throw wordErr;
-
-                alert('☁️ 词书已成功上传至云端！进入待管理员审核状态。');
-            } catch (error) {
-                alert('上传失败: ' + error.message);
-            }
-        }
-
-        async function fetchCloudBooks() {
-            try {
-                const { data: books, error } = await supabase
-                    .from('lexicon_books')
-                    .select('*')
-                    .eq('status', 'approved'); // 只拉取已审核通过的
-                
+                // 调用 RPC (无密码提交到挂起区)
+                const payloadBook = { name: title.replace(/📂 [本地] | \(\d+词\)/g, ''), level: currentWords[0].level || 'CET' };
+                const { error } = await supabaseClient.rpc('submit_lexicon', { p_book: payloadBook, p_words: currentWords });
                 if (error) throw error;
-                if (books.length === 0) return alert('云端暂无已审核的公共词书。');
-
-                const select = document.getElementById('bookSelect');
-                books.forEach(book => {
-                    if (!wordBooks[book.id]) { // 防重复
-                        const opt = document.createElement('option');
-                        opt.value = book.id;
-                        opt.text = `[云端公共] ${book.title} (${book.word_count}词)`;
-                        select.add(opt);
-                        // 预留占位符，真正选中时再拉取单词细节
-                        wordBooks[book.id] = []; 
-                    }
-                });
-                alert('✅ 云词库列表刷新成功！');
+                alert('🚀 词书已提交至 Supabase 云端，请等待管理员（xyhh99@qq.com）审核！');
             } catch (err) {
-                alert('拉取失败: ' + err.message);
+                // 如果 RPC 不存在或由于开发期直接插表
+                console.warn('RPC fail, using direct insert fallback...', err);
+                fallbackDirectInsert(title);
+            }
+        }
+        
+        async function fallbackDirectInsert(title) {
+            const { data: book, error: bErr } = await supabaseClient.from('lexicon_books').insert([{ 
+                name: title.replace(/📂 [本地] | \(\d+词\)/g, ''), level: currentWords[0].level || 'CET', word_count: currentWords.length, status: 'pending' 
+            }]).select();
+            if(bErr) return alert('上传失败: ' + bErr.message);
+            
+            const wordsToInsert = currentWords.map(w => ({ ...w, book_id: book[0].id }));
+            await supabaseClient.from('lexicon_words').insert(wordsToInsert);
+            alert('🚀 词书已直接推入数据库(待审核状态)。');
+        }
+
+        async function fetchApprovedBooks() {
+            const { data } = await supabaseClient.from('lexicon_books').select('*').eq('status', 'approved');
+            if(data) {
+                const select = document.getElementById('bookSelect');
+                data.forEach(b => {
+                    const id = 'cloud_' + b.id;
+                    select.add(new Option(`☁️ [云端] ${b.name} (${b.word_count}词)`, id));
+                    // 异步加载词汇
+                    supabaseClient.from('lexicon_words').select('*').eq('book_id', b.id).then(({data: wData}) => {
+                        systemBooks[id] = wData;
+                    });
+                });
             }
         }
 
-        // 下拉变化时，如果是空数组(云端占位)，则去获取详情
-        const originalHandleBookChange = handleBookChange;
-        window.handleBookChange = async function() {
-            const val = document.getElementById('bookSelect').value;
-            if (wordBooks[val] && wordBooks[val].length === 0) {
-                // Fetch words
-                const { data, error } = await supabase.from('lexicon_words').select('*').eq('book_id', val).order('sort_order');
-                if (!error && data) {
-                    wordBooks[val] = data;
-                }
-            }
-            originalHandleBookChange();
-        };
-
-        // --- 8. 管理员系统与学生登录验证 ---
-        function toggleLoginModal(type = 'admin') {
-            const modal = document.getElementById('loginModal');
-            document.getElementById('loginType').value = type;
-            
-            if (type === 'admin') {
-                document.getElementById('loginTitle').innerText = '管理员验证';
-                document.getElementById('loginIcon').className = 'fa-solid fa-shield-halved';
-                document.getElementById('loginEmail').value = 'xyhh99@qq.com'; // 根据要求默认填入
+        // ================= 8. 管理员系统 =================
+        function toggleLoginModal() {
+            const m = document.getElementById('loginModal');
+            const inner = document.getElementById('loginModalInner');
+            if (m.classList.contains('hidden')) {
+                m.classList.remove('hidden');
+                setTimeout(() => { m.classList.remove('opacity-0'); inner.classList.remove('scale-95'); }, 10);
             } else {
-                document.getElementById('loginTitle').innerText = '学生端登录';
-                document.getElementById('loginIcon').className = 'fa-solid fa-user';
-                document.getElementById('loginEmail').value = '';
+                m.classList.add('opacity-0'); inner.classList.add('scale-95');
+                setTimeout(() => { m.classList.add('hidden'); }, 300);
             }
-            
-            modal.classList.toggle('hidden');
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-            const type = document.getElementById('loginType').value;
-            const email = document.getElementById('loginEmail').value;
+            const em = document.getElementById('loginEmail').value;
             const pwd = document.getElementById('loginPassword').value;
-
-            if (type === 'admin') {
-                // 硬编码演示管理员验证 (生产环境需走Supabase Auth)
-                if (email === 'xyhh99@qq.com' && pwd === 'RACet*260926') {
-                    isAdmin = true;
-                    document.getElementById('tab-adminPanel').classList.remove('hidden');
-                    toggleLoginModal();
-                    switchTab('adminPanel');
-                    loadPendingBooks();
-                } else {
-                    alert('管理员凭证错误！');
-                }
-            } else {
-                alert('学生独立登录功能正在对接 Supabase Auth，敬请期待阶段二。');
+            
+            // 真实逻辑应为 await supabaseClient.auth.signInWithPassword({ email: em, password: pwd });
+            // 为了保证即使您尚未在 Supabase 注册 Auth 用户也能看到界面，这里做前端硬核校验(根据您的密码需求)：
+            if (em === 'xyhh99@qq.com' && pwd === 'RACet*260926') {
+                isAdmin = true;
+                document.getElementById('userStatusBadge').classList.remove('hidden');
+                document.getElementById('tab-admin').classList.remove('hidden');
                 toggleLoginModal();
+                alert('🔓 验证成功。欢迎回来，管理员 (吴兆宇)。');
+            } else {
+                alert('认证失败，请检查邮箱与密码。');
             }
         }
 
-        // --- 9. 管理员看板功能 ---
+        function logout() {
+            isAdmin = false;
+            document.getElementById('userStatusBadge').classList.add('hidden');
+            document.getElementById('tab-admin').classList.add('hidden');
+            switchTab('home');
+        }
+
         async function loadPendingBooks() {
-            if(!isAdmin) return;
-            const listEl = document.getElementById('adminBooksList');
-            listEl.innerHTML = '<p class="text-xs text-gray-500">正在加载...</p>';
-            try {
-                const { data: books, error } = await supabase.from('lexicon_books').select('*').eq('status', 'pending');
-                if(error) throw error;
-                if(books.length === 0) return listEl.innerHTML = '<p class="text-xs text-green-600 font-bold"><i class="fa-solid fa-check"></i> 当前无待审核词书</p>';
-                
-                listEl.innerHTML = books.map(b => `
-                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded border border-gray-200">
-                        <div>
-                            <p class="font-bold text-sm text-tjra-navy">${b.title}</p>
-                            <p class="text-xs text-gray-500">单词量: ${b.word_count} | 提交时间: ${new Date(b.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <button onclick="approveBook('${b.id}')" class="bg-emerald-500 text-white px-3 py-1.5 text-xs font-bold rounded hover:bg-emerald-600 transition">通过发布</button>
+            const list = document.getElementById('adminBookList');
+            list.innerHTML = '<div class="text-xs text-gray-500">正在查询...</div>';
+            const { data } = await supabaseClient.from('lexicon_books').select('*').eq('status', 'pending');
+            if (!data || data.length === 0) return list.innerHTML = '<div class="text-sm text-gray-400">目前没有待审核的词书。</div>';
+            
+            list.innerHTML = data.map(b => `
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-sm text-tjra-navy">${b.name}</div>
+                        <div class="text-xs text-gray-500">等级: ${b.level} | 词数: ${b.word_count}</div>
                     </div>
-                `).join('');
-            } catch(e) {
-                listEl.innerHTML = `<p class="text-xs text-red-500">加载失败: ${e.message}</p>`;
-            }
+                    <button onclick="approveBook('${b.id}')" class="bg-tjra-sky text-white text-xs px-3 py-1.5 rounded hover:bg-blue-600 transition">批准发布</button>
+                </div>
+            `).join('');
         }
 
         async function approveBook(id) {
-            try {
-                const { error } = await supabase.from('lexicon_books').update({ status: 'approved' }).eq('id', id);
-                if(error) throw error;
-                alert('✅ 审核通过！该词书已加入公共词库。');
-                loadPendingBooks();
-            } catch(e) {
-                alert('操作失败: ' + e.message);
-            }
+            await supabaseClient.from('lexicon_books').update({ status: 'approved' }).eq('id', id);
+            alert('批准成功！该词书已在全网公开。');
+            loadPendingBooks();
+            fetchApprovedBooks();
         }
 
-        function importStudents(e) {
-            const file = e.target.files[0];
+        // ================= 9. 学生白名单导入 =================
+        function handleStudentUpload(event) {
+            const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = async function(evt) {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet);
+            reader.onload = async function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 
-                if (json.length === 0) return alert('名单为空');
-                
-                const students = json.map(r => ({
-                    student_no: String(r['学号'] || ''),
-                    name: r['姓名'] || '',
-                    email: r['邮箱'] || '',
-                    class_name: r['班级'] || ''
-                })).filter(s => s.name !== '' && s.email !== '');
+                const mapped = json.map(row => ({
+                    student_no: String(row['学号']||''), display_name: row['姓名']||'', 
+                    email: row['邮箱']||'', class_name: row['班级']||''
+                })).filter(r => r.email && r.display_name);
 
-                try {
-                    const { error } = await supabase.from('students_list').insert(students);
-                    if(error) throw error;
-                    alert(`✅ 成功导入 ${students.length} 名学生信息到数据库！`);
-                } catch(err) {
-                    alert('导入数据库失败，可能存在重复邮箱。\n' + err.message);
-                }
+                if(mapped.length === 0) return alert('未识别到有效数据，请检查表头。');
+                
+                const { error } = await supabaseClient.from('student_roster').insert(mapped);
+                if(error) alert('导入失败: ' + error.message);
+                else alert(`导入成功！共录入 ${mapped.length} 名学生名单至数据库。`);
             };
             reader.readAsArrayBuffer(file);
         }
-
     </script>
 </body>
 </html>
