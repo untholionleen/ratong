@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仁爱通 - 单词打卡与学术词汇系统</title>
+    <title>仁爱通 - 学术英语单词打卡与复盘系统</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS -->
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS (Excel解析) -->
+    <!-- SheetJS (Excel) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- QRCode.js (海报二维码) -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <!-- html2canvas (海报导出) -->
+    <!-- QRCode.js (海报二维码生成) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- html2canvas (打卡海报截图) -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <!-- FontAwesome -->
+    <!-- FontAwesome 图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; }
@@ -25,490 +26,604 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-slate-800 selection:text-white">
 
-    <!-- 顶部导航 -->
+    <!-- 顶栏 -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-graduation-cap text-slate-800 text-2xl"></i>
                 <div>
-                    <span class="serif-title font-bold text-lg tracking-wider text-slate-900 block leading-tight">仁爱通 · 词汇大师</span>
-                    <span class="text-[10px] text-slate-400 font-mono">Academic Lexicon System</span>
+                    <span class="serif-title font-bold text-lg tracking-wider text-slate-900 block leading-none">仁爱通 · Academic Lexicon</span>
+                    <span class="text-[10px] text-slate-400">学术四六级/考研云打卡平台</span>
                 </div>
             </div>
             
-            <nav id="main-nav" class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
-                <button onclick="switchTab('study')" id="tab-study" class="text-slate-900 border-b-2 border-slate-900 pb-1"><i class="fa-solid fa-book-open mr-1.5"></i>背诵打卡</button>
-                <button onclick="switchTab('review')" id="tab-review" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-brain mr-1.5"></i>温习巩固</button>
-                <button onclick="switchTab('manage')" id="tab-manage" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-database mr-1.5"></i>词书管理</button>
-                <button onclick="switchTab('poster')" id="tab-poster" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-share-nodes mr-1.5"></i>生成海报</button>
+            <nav class="flex items-center space-x-4 text-xs md:text-sm font-medium text-slate-600">
+                <button onclick="switchTab('study')" id="tab-study" class="hover:text-slate-900 text-slate-900 border-b-2 border-slate-900 pb-1">
+                    <i class="fa-solid fa-book-open mr-1"></i>背诵打卡
+                </button>
+                <button onclick="switchTab('review')" id="tab-review" class="hover:text-slate-900 pb-1">
+                    <i class="fa-solid fa-brain mr-1"></i>温习与错题
+                </button>
+                <button onclick="switchTab('manage')" id="tab-manage" class="hover:text-slate-900 pb-1">
+                    <i class="fa-solid fa-database mr-1"></i>云端词书库
+                </button>
+                <div id="user-status-area" class="border-l border-slate-200 pl-3">
+                    <button onclick="openAuthModal()" id="auth-btn" class="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800">
+                        登录 / 注册
+                    </button>
+                </div>
             </nav>
-
-            <div id="user-header-info" class="flex items-center space-x-3 text-xs">
-                <!-- 登录用户信息展示 -->
-            </div>
         </div>
     </header>
 
-    <!-- 主体区域 -->
+    <!-- 主体内容 -->
     <main class="max-w-5xl mx-auto w-full px-4 py-6 flex-1">
-
-        <!-- AUTH MODAL / 登录注册 -->
-        <section id="view-auth" class="max-w-md mx-auto my-12 bg-white p-8 rounded-xl academic-border space-y-6">
-            <div class="text-center space-y-2">
-                <h2 class="serif-title text-2xl font-bold text-slate-900">欢迎登录仁爱通</h2>
-                <p class="text-xs text-slate-500">高效助力四六级、考研与学术词汇突破</p>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">账号 / 用户名</label>
-                    <input id="auth-username" type="text" placeholder="请输入用户名" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
-                </div>
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-semibold text-slate-600">密码</label>
-                        <button onclick="generateRandomPassword()" class="text-[11px] text-indigo-600 hover:underline">生成随机强密码</button>
+        
+        <!-- SECTION 1: 单词背诵打卡 -->
+        <section id="view-study" class="space-y-6">
+            <!-- 目标设置栏 -->
+            <div class="bg-white p-4 md:p-5 rounded-xl academic-border flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">选择词书</label>
+                        <select id="study-book-select" onchange="onStudyBookChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs md:text-sm rounded-lg p-2 font-medium min-w-[160px]">
+                            <option value="">加载中...</option>
+                        </select>
                     </div>
-                    <input id="auth-password" type="text" placeholder="请输入密码" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">单组量</label>
+                        <select id="study-batch-size" onchange="onStudyBookChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs md:text-sm rounded-lg p-2 font-medium">
+                            <option value="5">5 个</option>
+                            <option value="10" selected>10 个</option>
+                            <option value="15">15 个</option>
+                            <option value="25">25 个</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <button onclick="handleLogin()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">登录</button>
-                    <button onclick="handleRegister()" class="w-full border border-slate-300 text-slate-700 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50">注册新账号</button>
-                </div>
-                <p class="text-[11px] text-slate-400 text-center">如遇密码遗失或使用异常，请联系客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
-            </div>
-        </section>
 
-        <!-- SECTION 1: 单词背诵 -->
-        <section id="view-study" class="hidden space-y-6">
-            <!-- 头部配置栏 -->
-            <div class="bg-white p-5 rounded-xl academic-border grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">选择词书</label>
-                    <select id="study-book-select" onchange="loadBookWords()" class="w-full bg-slate-50 border text-slate-800 text-sm rounded-lg p-2 font-medium"></select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">本次背诵量 (每组)</label>
-                    <select id="study-batch-size" onchange="resetBatch()" class="w-full bg-slate-50 border text-slate-800 text-sm rounded-lg p-2 font-medium">
-                        <option value="5">5 个 / 组</option>
-                        <option value="10" selected>10 个 / 组</option>
-                        <option value="15">15 个 / 组</option>
-                        <option value="25">25 个 / 组</option>
-                    </select>
-                </div>
-                <div class="text-right flex flex-col justify-center">
-                    <span class="text-xs text-slate-400 font-medium">预计完成全书时间</span>
-                    <span id="estimated-time" class="text-sm font-bold text-slate-800 font-mono">计算中...</span>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400">今日进度</div>
+                        <div class="text-base font-bold text-slate-800 font-mono"><span id="study-progress-count">0</span> / <span id="study-total-count">0</span></div>
+                    </div>
+                    <button onclick="generatePoster()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-3 py-2 rounded-lg flex items-center space-x-1">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span>生成沪江打卡海报</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- 卡片主体 -->
-            <div id="study-card-container" class="max-w-xl mx-auto min-h-[380px] flex items-center justify-center">
-                <div id="word-card" class="w-full bg-white rounded-xl academic-border p-8 space-y-6 relative border-t-4 border-t-slate-800">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h2 id="card-word" class="serif-title text-4xl font-bold text-slate-900">word</h2>
-                            <div class="flex space-x-3 text-xs text-slate-500 font-mono mt-2">
-                                <button onclick="speakTTS('us')" class="hover:text-slate-900"><i class="fa-solid fa-volume-high text-indigo-500 mr-1"></i>美 <span id="card-us-phone">[-]</span></button>
-                                <button onclick="speakTTS('uk')" class="hover:text-slate-900"><i class="fa-solid fa-volume-high text-emerald-500 mr-1"></i>英 <span id="card-uk-phone">[-]</span></button>
+            <!-- 卡片交互 -->
+            <div id="word-card-container" class="max-w-2xl mx-auto min-h-[380px]">
+                <div id="empty-study-state" class="bg-white p-12 text-center rounded-xl academic-border space-y-3">
+                    <i class="fa-solid fa-folder-open text-4xl text-slate-300"></i>
+                    <p class="text-slate-500 text-sm">请先选择词书或点击“云端词书库”导入 Excel 字典开始学习。</p>
+                </div>
+
+                <div id="word-card" class="hidden bg-white rounded-xl academic-border p-6 md:p-8 flex flex-col justify-between space-y-6 relative">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <h2 id="card-word" class="serif-title text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">word</h2>
+                            <div class="flex space-x-2">
+                                <button onclick="speakWord('us')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
+                                    <i class="fa-solid fa-volume-high"></i>
+                                    <span>美发音</span>
+                                </button>
+                                <button onclick="speakWord('uk')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg flex items-center space-x-1">
+                                    <i class="fa-solid fa-volume-high"></i>
+                                    <span>英发音</span>
+                                </button>
                             </div>
                         </div>
-                        <span id="batch-progress" class="text-xs bg-slate-100 font-mono px-2.5 py-1 rounded-full text-slate-600">1 / 10</span>
-                    </div>
-
-                    <div id="card-details" class="space-y-3 pt-2">
-                        <p id="card-pos-def" class="text-slate-800 font-medium text-base">vt. 放弃，遗弃</p>
-                        <div class="bg-slate-50 p-3 rounded-lg border text-xs text-slate-600">
-                            <span class="font-semibold text-slate-700">学术解析：</span><span id="card-explanation">--</span>
-                        </div>
-                        <div class="text-xs text-slate-600 italic">
-                            <p id="card-example">"Example sentence."</p>
-                            <p id="card-example-trans" class="not-italic text-slate-400 mt-0.5">例句翻译</p>
+                        
+                        <div class="flex space-x-4 text-xs font-mono text-slate-500">
+                            <span id="card-us-phone">美 [ - ]</span>
+                            <span id="card-uk-phone">英 [ - ]</span>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                        <button onclick="recordWordResult(false)" class="py-2.5 border rounded-lg text-slate-700 font-medium hover:bg-slate-50"><i class="fa-solid fa-xmark text-red-500 mr-1.5"></i>不认识</button>
-                        <button onclick="recordWordResult(true)" class="py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800"><i class="fa-solid fa-check text-green-400 mr-1.5"></i>记住了</button>
+                    <div id="card-details" class="space-y-3 border-t border-slate-100 pt-4">
+                        <div>
+                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">词性与词义</span>
+                            <p id="card-definition" class="text-slate-800 font-medium text-base">---</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200/60 text-xs text-slate-600">
+                            <span class="font-semibold block mb-0.5 text-slate-700"><i class="fa-solid fa-graduation-cap mr-1"></i>学术解析:</span>
+                            <span id="card-explanation">---</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">权威例句</span>
+                            <p id="card-example" class="text-slate-700 italic font-serif text-sm">---</p>
+                            <p id="card-example-trans" class="text-slate-500 text-xs mt-0.5">---</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                        <button onclick="handleWordAction(false)" class="w-full py-3 rounded-lg border border-red-200 text-red-600 font-medium hover:bg-red-50 text-sm flex items-center justify-center space-x-1">
+                            <i class="fa-solid fa-xmark"></i>
+                            <span>不认识 (记入错题)</span>
+                        </button>
+                        <button onclick="handleWordAction(true)" class="w-full py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 text-sm flex items-center justify-center space-x-1">
+                            <i class="fa-solid fa-check text-green-400"></i>
+                            <span>掌握了 (下一个)</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- SECTION 2: 温习模块 (测验三合一) -->
-        <section id="view-review" class="hidden max-w-xl mx-auto space-y-6">
-            <div class="bg-white p-4 rounded-xl academic-border flex justify-between items-center">
-                <span class="font-bold text-slate-800 text-sm">温习模式</span>
-                <div class="space-x-2">
-                    <button onclick="startReview('en2cn')" class="px-3 py-1 bg-slate-800 text-white rounded text-xs">看英选中</button>
-                    <button onclick="startReview('cn2en')" class="px-3 py-1 border text-slate-700 rounded text-xs">看中选英</button>
-                    <button onclick="startReview('audio')" class="px-3 py-1 border text-slate-700 rounded text-xs">听音辨义</button>
+        <!-- SECTION 2: 温习模块 & 错题复盘 -->
+        <section id="view-review" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl academic-border space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="serif-title font-bold text-lg text-slate-900">学术温习与错题强化中心</h3>
+                    <div class="flex space-x-2">
+                        <button onclick="startReviewMode('en-to-cn')" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded">看英文选中文</button>
+                        <button onclick="startReviewMode('cn-to-en')" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded">看中文选英文</button>
+                    </div>
                 </div>
-            </div>
 
-            <div id="quiz-card" class="bg-white p-8 rounded-xl academic-border space-y-6">
-                <div id="quiz-question" class="text-center font-bold text-2xl text-slate-900">Question</div>
-                <div id="quiz-options" class="grid grid-cols-1 gap-3"></div>
+                <div id="review-quiz-box" class="hidden p-4 border rounded-xl bg-slate-50 space-y-4">
+                    <div id="quiz-question" class="text-xl font-bold text-center py-4 text-slate-800">---</div>
+                    <div id="quiz-options" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+                <div id="review-empty-box" class="text-center py-8 text-slate-400 text-sm">
+                    点击上方按钮开启多维度温习测验。
+                </div>
             </div>
         </section>
 
-        <!-- SECTION 3: 词书管理与云端 Excel 导入 -->
+        <!-- SECTION 3: 词书与云端管理 -->
         <section id="view-manage" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-xl academic-border space-y-4">
-                    <h3 class="font-bold text-slate-900 border-b pb-2"><i class="fa-solid fa-folder-plus mr-2"></i>1. 新建云端词书</h3>
-                    <input id="new-book-name" type="text" placeholder="词书名称 (例: 六级核心词汇)" class="w-full border p-2 text-sm rounded-lg">
-                    <select id="new-book-level" class="w-full border p-2 text-sm rounded-lg">
-                        <option value="CET-4">CET-4 (四级)</option>
-                        <option value="CET-6">CET-6 (六级)</option>
-                        <option value="KYYY">考研英语</option>
-                        <option value="IELTS">雅思/托福</option>
-                    </select>
-                    <textarea id="new-book-desc" placeholder="词书简介..." class="w-full border p-2 text-sm rounded-lg" rows="2"></textarea>
-                    <button onclick="createWordbook()" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm">创建词书</button>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl academic-border space-y-4">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-slate-900"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>2. 导入 Excel 词库</h3>
-                        <button onclick="downloadTemplate()" class="text-xs text-indigo-600 underline">下载标准范本</button>
-                    </div>
-                    <select id="import-target-book" class="w-full border p-2 text-sm rounded-lg"></select>
-                    <input id="excel-file-input" type="file" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500 border p-2 rounded-lg">
-                    <button onclick="importExcel()" class="w-full bg-emerald-700 text-white py-2 rounded-lg text-sm">解析并提交至云端</button>
-                </div>
-            </div>
-
-            <!-- 词书列表 -->
-            <div class="bg-white p-6 rounded-xl academic-border space-y-4">
-                <h3 class="font-bold text-slate-900 border-b pb-2">云端现有词库</h3>
-                <div id="wordbooks-list-table" class="divide-y text-sm"></div>
-            </div>
-        </section>
-
-        <!-- SECTION 4: 沪江风格打卡海报生成 -->
-        <section id="view-poster" class="hidden space-y-6 max-w-lg mx-auto">
-            <div id="poster-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white p-8 rounded-2xl shadow-2xl space-y-6 relative overflow-hidden">
-                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                <!-- 创建词书 -->
+                <div class="bg-white p-5 rounded-xl academic-border space-y-3">
+                    <h3 class="serif-title font-bold text-base text-slate-900 border-b pb-2">新建词书</h3>
                     <div>
-                        <span class="serif-title font-bold text-xl tracking-wider">ACADEMIC LEXICON</span>
-                        <p class="text-[10px] text-slate-400">仁爱通 · 四六级学术打卡</p>
+                        <label class="block text-xs text-slate-500 mb-1">词书名称</label>
+                        <input id="input-book-name" type="text" placeholder="例: 四级核心冲刺词汇" class="w-full border rounded-lg p-2 text-sm">
                     </div>
-                    <span class="text-xs bg-white/10 px-3 py-1 rounded-full font-mono" id="poster-date">2026-09-27</span>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">等级</label>
+                        <select id="input-book-level" class="w-full border rounded-lg p-2 text-sm">
+                            <option value="CET-4">CET-4 (四级)</option>
+                            <option value="CET-6">CET-6 (六级)</option>
+                            <option value="Postgraduate">考研英语</option>
+                            <option value="IELTS">雅思 / 托福</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">描述</label>
+                        <input id="input-book-desc" type="text" placeholder="简要描述..." class="w-full border rounded-lg p-2 text-sm">
+                    </div>
+                    <button onclick="createWordBook()" class="w-full bg-slate-800 text-white py-2 rounded-lg text-sm">创建新词书</button>
                 </div>
 
-                <div class="space-y-4 py-2">
-                    <p class="text-xs text-slate-300">学习者：<span id="poster-username" class="font-bold text-white">--</span></p>
-                    <div class="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
-                        <div>
-                            <p class="text-[10px] text-slate-400">今日打卡单词</p>
-                            <p id="poster-today-count" class="text-3xl font-bold font-mono text-emerald-400">0</p>
+                <!-- Excel 导词 -->
+                <div class="bg-white p-5 rounded-xl academic-border space-y-3 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="serif-title font-bold text-base text-slate-900">Excel 转云端词书</h3>
+                            <button onclick="downloadExcelTemplate()" class="text-xs text-slate-600 underline">下载标准 Excel 模板</button>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-slate-400">累计坚持天数</p>
-                            <p id="poster-days-count" class="text-3xl font-bold font-mono text-indigo-400">1</p>
+                        <div class="mt-3 space-y-3">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">选择目标绑定词书</label>
+                                <select id="import-target-book" class="w-full border rounded-lg p-2 text-sm">
+                                    <option value="">加载中...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">选择 Excel 文件 (.xlsx)</label>
+                                <input id="excel-file-input" type="file" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500">
+                            </div>
                         </div>
                     </div>
-                    <div class="text-xs text-slate-300 bg-white/5 p-3 rounded-lg border border-white/10 flex justify-between items-center">
-                        <span>超越同级学习者：</span>
-                        <span id="poster-beat-percent" class="font-bold font-mono text-amber-300 text-sm">88.5%</span>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between border-t border-white/10 pt-4">
-                    <div class="space-y-1">
-                        <p class="text-xs font-bold text-white">扫码加入“仁爱通”</p>
-                        <p class="text-[10px] text-slate-400">一起高效突破四六级/考研词汇</p>
-                    </div>
-                    <div id="qrcode-box" class="bg-white p-1 rounded-lg"></div>
+                    <button onclick="processExcelImport()" class="w-full bg-emerald-700 text-white py-2 rounded-lg text-sm hover:bg-emerald-600">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i>开始解析并写入云数据库
+                    </button>
                 </div>
             </div>
 
-            <button onclick="downloadPoster()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-medium shadow flex items-center justify-center space-x-2">
-                <i class="fa-solid fa-download"></i><span>保存打卡海报图片</span>
-            </button>
+            <!-- 云端词书列表 -->
+            <div class="bg-white rounded-xl academic-border p-5 space-y-3">
+                <h3 class="serif-title font-bold text-base text-slate-900 border-b pb-2">云端已存词书</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50 text-xs font-semibold uppercase border-b">
+                            <tr>
+                                <th class="p-2.5">词书名称</th>
+                                <th class="p-2.5">等级</th>
+                                <th class="p-2.5">简介</th>
+                                <th class="p-2.5 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="book-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
 
-    <footer class="bg-white border-t py-4 text-center text-xs text-slate-400 space-y-1">
-        <p>仁爱通 (Rentong) Academic Lexicon &copy; 2026 Open Source Project.</p>
-        <p>反馈与建议客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
+    <!-- 模态框 1: 用户登录与随机密码注册 -->
+    <div id="auth-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl academic-border max-w-sm w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="serif-title font-bold text-slate-900">账号登录 / 注册</h3>
+                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">电子邮箱</label>
+                    <input id="auth-email" type="email" placeholder="yourname@domain.com" class="w-full border rounded-lg p-2.5">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-medium text-slate-500">密码</label>
+                        <button onclick="generateRandomPassword()" class="text-[10px] text-slate-600 underline">随机生成推荐密码</button>
+                    </div>
+                    <input id="auth-password" type="text" placeholder="密码" class="w-full border rounded-lg p-2.5 font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button onclick="handleAuth('login')" class="bg-slate-900 text-white py-2 rounded-lg">登录</button>
+                    <button onclick="handleAuth('register')" class="bg-slate-100 text-slate-800 border py-2 rounded-lg">注册账号</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 2: 沪江打卡海报预览 -->
+    <div id="poster-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl academic-border max-w-md w-full p-6 space-y-4 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="serif-title font-bold text-slate-900">打卡海报生成成功</h3>
+                <button onclick="closePosterModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- 海报模板容器 -->
+            <div id="poster-card" class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-xl space-y-6 shadow-2xl relative">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                    <span class="serif-title tracking-wider text-sm font-bold text-amber-400">仁爱通 · 学术打卡</span>
+                    <span id="poster-date" class="text-xs text-slate-400 font-mono">2026-09-27</span>
+                </div>
+
+                <div class="space-y-4">
+                    <p class="text-xs text-slate-300 italic font-serif">“A different language is a different vision of life.”</p>
+                    <div class="grid grid-cols-3 gap-2 bg-slate-800/80 p-3 rounded-lg text-center border border-slate-700">
+                        <div>
+                            <div class="text-[10px] text-slate-400">今日打卡</div>
+                            <div id="poster-today-count" class="text-lg font-bold font-mono text-emerald-400">0</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-slate-400">坚持天数</div>
+                            <div id="poster-days-count" class="text-lg font-bold font-mono text-amber-400">1</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-slate-400">超越用户</div>
+                            <div id="poster-percent" class="text-lg font-bold font-mono text-cyan-400">85%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-700/60">
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold">扫码加入“仁爱通”</p>
+                        <p class="text-[10px] text-slate-400">一起助力四六级与考研</p>
+                    </div>
+                    <div id="qrcode-container" class="bg-white p-1 rounded-lg"></div>
+                </div>
+            </div>
+
+            <p class="text-center text-xs text-slate-400">长按或截图保存海报与好友分享打卡！</p>
+        </div>
+    </div>
+
+    <!-- Footer 与客服联系 -->
+    <footer class="bg-white border-t py-4 text-center text-xs text-slate-500 space-y-1">
+        <p>仁爱通 Academic Lexicon Platform &copy; 2026 Open Source.</p>
+        <p>遇到问题或有意见反馈？请联系客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-800 underline font-medium">xyhh99@qq.com</a></p>
     </footer>
 
+    <!-- JS 业务逻辑 -->
     <script>
-        // Supabase 初始化
+        // 初始化 Supabase 客户端
         const SUPABASE_URL = "https://zqrhfcsrexoamizkzzhq.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcmhmY3NyZXhvYW1pemt6emhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY3MDUsImV4cCI6MjEwNjAwMjcwNX0.Hw3mBAy3mJvPa7SeVOdfArq-fc8G6sff77SfWqWeZ_M";
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentUser = JSON.parse(localStorage.getItem('rentong_user') || 'null');
+        let currentUser = null;
         let wordbooks = [];
         let currentWords = [];
-        let currentIndex = 0;
-        let todayLearnedCount = 0;
+        let currentWordIndex = 0;
+        let wrongWords = [];
 
         window.addEventListener('DOMContentLoaded', async () => {
-            updateUserUI();
+            await checkUserSession();
             await fetchWordbooks();
             initQRCode();
         });
 
-        // 随机密码生成器
-        function generateRandomPassword() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-            let pwd = '';
-            for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-            document.getElementById('auth-password').value = pwd;
-        }
-
-        // 注册与登录
-        async function handleRegister() {
-            const u = document.getElementById('auth-username').value.trim();
-            const p = document.getElementById('auth-password').value.trim();
-            if (!u || !p) return alert("请输入完整账号密码");
-
-            const { data, error } = await db.from('app_users').insert([{ username: u, password_hash: p }]).select();
-            if (error) return alert("注册失败 (用户名可能已存在): " + error.message);
-            
-            alert("注册成功！已自动登录");
-            currentUser = data[0];
-            localStorage.setItem('rentong_user', JSON.stringify(currentUser));
-            updateUserUI();
-        }
-
-        async function handleLogin() {
-            const u = document.getElementById('auth-username').value.trim();
-            const p = document.getElementById('auth-password').value.trim();
-            const { data, error } = await db.from('app_users').select('*').eq('username', u).eq('password_hash', p);
-            
-            if (error || !data.length) return alert("账号或密码错误");
-            currentUser = data[0];
-            localStorage.setItem('rentong_user', JSON.stringify(currentUser));
-            updateUserUI();
-        }
-
-        function handleLogout() {
-            currentUser = null;
-            localStorage.removeItem('rentong_user');
-            updateUserUI();
-        }
-
-        function updateUserUI() {
-            const header = document.getElementById('user-header-info');
-            const nav = document.getElementById('main-nav');
-            if (currentUser) {
-                header.innerHTML = `
-                    <span class="font-medium text-slate-700"><i class="fa-solid fa-user-check mr-1 text-emerald-600"></i>${currentUser.username}</span>
-                    <button onclick="handleLogout()" class="text-slate-400 hover:text-slate-700">退出</button>
+        // 验证用户 Session
+        async function checkUserSession() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                document.getElementById('user-status-area').innerHTML = `
+                    <span class="text-xs text-slate-600 mr-2"><i class="fa-solid fa-user mr-1"></i>${currentUser.email.split('@')[0]}</span>
+                    <button onclick="handleLogout()" class="text-xs text-red-600 hover:underline">退出</button>
                 `;
-                nav.classList.remove('hidden');
-                document.getElementById('view-auth').classList.add('hidden');
-                switchTab('study');
-            } else {
-                header.innerHTML = `<span class="text-slate-400">未登录</span>`;
-                nav.classList.add('hidden');
-                document.getElementById('view-auth').classList.remove('hidden');
-                hideAllSections();
             }
         }
 
-        function hideAllSections() {
-            ['view-study','view-review','view-manage','view-poster'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
+        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+        function generateRandomPassword() {
+            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+            let pass = "";
+            for (let i = 0; i < 12; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            document.getElementById('auth-password').value = pass;
+        }
+
+        async function handleAuth(type) {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            if (!email || !password) return alert("请输入邮箱与密码");
+
+            if (type === 'register') {
+                const { data, error } = await db.auth.signUp({ email, password });
+                if (error) return alert("注册失败: " + error.message);
+                alert("注册成功！");
+            } else {
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
+                if (error) return alert("登录失败: " + error.message);
+            }
+            closeAuthModal();
+            location.reload();
+        }
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            location.reload();
         }
 
         function switchTab(tab) {
-            if (!currentUser) return;
-            hideAllSections();
-            document.getElementById('view-' + tab).classList.remove('hidden');
-            if (tab === 'poster') renderPosterData();
+            ['study', 'review', 'manage'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).className = "hover:text-slate-900 pb-1";
+            });
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = "hover:text-slate-900 text-slate-900 border-b-2 border-slate-900 pb-1 font-semibold";
         }
 
-        // 加载云端词书
+        // 加载词书
         async function fetchWordbooks() {
-            const { data } = await db.from('wordbooks').select('*').order('created_at', { ascending: false });
+            const { data, error } = await db.from('wordbooks').select('*').order('created_at', { ascending: false });
+            if (error) return console.error(error);
             wordbooks = data || [];
-            
-            const studySel = document.getElementById('study-book-select');
-            const importSel = document.getElementById('import-target-book');
-            
-            const opts = wordbooks.map(b => `<option value="${b.id}">${b.name} (${b.level})</option>`).join('');
-            studySel.innerHTML = opts || '<option value="">暂无词书</option>';
-            importSel.innerHTML = opts || '<option value="">暂无词书</option>';
-
-            if (wordbooks.length) loadBookWords();
+            renderWordbookDropdowns();
             renderWordbookTable();
         }
 
-        // 加载选定词书单词
-        async function loadBookWords() {
-            const bookId = document.getElementById('study-book-select').value;
-            if (!bookId) return;
-            
-            const { data } = await db.from('words').select('*').eq('book_id', bookId);
-            currentWords = data || [];
-            currentIndex = 0;
-            renderCurrentWord();
-            calculateEstimateTime();
-        }
-
-        function renderCurrentWord() {
-            if (!currentWords.length) {
-                document.getElementById('card-word').innerText = "暂无单词";
+        function renderWordbookDropdowns() {
+            const studySelect = document.getElementById('study-book-select');
+            const importSelect = document.getElementById('import-target-book');
+            if (wordbooks.length === 0) {
+                studySelect.innerHTML = `<option value="">(暂无词书)</option>`;
+                importSelect.innerHTML = `<option value="">(暂无词书)</option>`;
                 return;
             }
-            if (currentIndex >= currentWords.length) {
-                alert("已经完成当前组所有单词！");
-                currentIndex = 0;
+            const opts = wordbooks.map(b => `<option value="${b.id}">${b.name} (${b.level})</option>`).join('');
+            studySelect.innerHTML = opts;
+            importSelect.innerHTML = opts;
+            onStudyBookChange();
+        }
+
+        function renderWordbookTable() {
+            const tbody = document.getElementById('book-table-body');
+            if (wordbooks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">云端暂无词书。</td></tr>`;
+                return;
             }
-            const w = currentWords[currentIndex];
-            document.getElementById('card-word').innerText = w.word;
-            document.getElementById('card-us-phone').innerText = `/${w.us_phonetic || '-'}/`;
-            document.getElementById('card-uk-phone').innerText = `/${w.uk_phonetic || '-'}/`;
-            document.getElementById('card-pos-def').innerText = w.pos_def;
-            document.getElementById('card-explanation').innerText = w.explanation || '暂无详细解释';
-            document.getElementById('card-example').innerText = w.example ? `"${w.example}"` : '';
-            document.getElementById('card-example-trans').innerText = w.example_trans || '';
-
-            const batchSize = document.getElementById('study-batch-size').value;
-            document.getElementById('batch-progress').innerText = `${(currentIndex % batchSize) + 1} / ${batchSize}`;
+            tbody.innerHTML = wordbooks.map(b => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-medium">${b.name}</td>
+                    <td class="p-2.5"><span class="text-xs bg-slate-100 p-1 rounded border">${b.level}</span></td>
+                    <td class="p-2.5 text-xs text-slate-500">${b.description || '-'}</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteWordbook('${b.id}')" class="text-xs text-red-600 hover:underline">删除</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        function recordWordResult(known) {
-            todayLearnedCount++;
-            currentIndex++;
-            renderCurrentWord();
+        async function createWordBook() {
+            const name = document.getElementById('input-book-name').value.trim();
+            const level = document.getElementById('input-book-level').value;
+            const description = document.getElementById('input-book-desc').value.trim();
+            if (!name) return alert("请输入词书名");
+            const { error } = await db.from('wordbooks').insert([{ name, level, description }]);
+            if (error) return alert("创建失败: " + error.message);
+            alert("词书创建成功！");
+            await fetchWordbooks();
         }
 
-        // TTS 语音朗读
-        function speakTTS(type) {
-            const word = document.getElementById('card-word').innerText;
-            if (!word) return;
-            const u = new SpeechSynthesisUtterance(word);
-            u.lang = type === 'us' ? 'en-US' : 'en-GB';
-            window.speechSynthesis.speak(u);
+        async function deleteWordbook(id) {
+            if (!confirm("确定删除该词书及其所有关联单词？")) return;
+            const { error } = await db.from('wordbooks').delete().eq('id', id);
+            if (error) return alert("删除失败: " + error.message);
+            await fetchWordbooks();
         }
 
-        // 计算完成时间
-        function calculateEstimateTime() {
-            const batch = parseInt(document.getElementById('study-batch-size').value);
-            const total = currentWords.length;
-            const days = Math.ceil(total / batch);
-            document.getElementById('estimated-time').innerText = `约 ${days} 天完成`;
-        }
-
-        function resetBatch() {
-            currentIndex = 0;
-            renderCurrentWord();
-            calculateEstimateTime();
-        }
-
-        // 模板下载
-        function downloadTemplate() {
-            const data = [{
-                "word": "abandon",
-                "us_phonetic": "/əˈbændən/",
-                "uk_phonetic": "/əˈbændən/",
-                "pos_def": "vt. 放弃，遗弃",
-                "explanation": "彻底放弃原本持有的事物",
-                "example": "Never abandon hope.",
-                "example_trans": "永远不要放弃希望。"
-            }];
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "词书模板");
-            XLSX.writeFile(wb, "Rentong_Wordbook_Template.xlsx");
-        }
-
-        // 导入 Excel
-        async function importExcel() {
+        // Excel 导入逻辑
+        async function processExcelImport() {
             const targetBookId = document.getElementById('import-target-book').value;
             const fileInput = document.getElementById('excel-file-input');
-            if (!targetBookId || !fileInput.files.length) return alert("请选择目标词书与 Excel 文件");
+            if (!targetBookId || !fileInput.files.length) return alert("请先选择绑定词书及 Excel 文件！");
 
             const reader = new FileReader();
-            reader.onload = async (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                
-                const formatted = json.map(r => ({
-                    book_id: targetBookId,
-                    word: r.word || r['单词'],
-                    us_phonetic: r.us_phonetic || r['美式音标'],
-                    uk_phonetic: r.uk_phonetic || r['英式音标'],
-                    pos_def: r.pos_def || r['词性词义'],
-                    explanation: r.explanation || r['解释'],
-                    example: r.example || r['例子'],
-                    example_trans: r.example_trans || r['例子翻译']
-                })).filter(w => w.word && w.pos_def);
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-                const { error } = await db.from('words').insert(formatted);
-                if (error) return alert("导入失败: " + error.message);
-                alert(`成功导入 ${formatted.length} 个单词！`);
-                loadBookWords();
+                    const wordsToInsert = jsonData.map(row => ({
+                        book_id: targetBookId,
+                        word: row['word'] || row['单词'] || '',
+                        us_phonetic: row['us_phonetic'] || row['美式音标'] || '',
+                        uk_phonetic: row['uk_phonetic'] || row['英式音标'] || '',
+                        pos_definition: row['pos_definition'] || row['词性词义'] || '',
+                        explanation: row['explanation'] || row['详细解释'] || '',
+                        example: row['example'] || row['例句'] || '',
+                        example_translation: row['example_translation'] || row['例句翻译'] || ''
+                    })).filter(w => w.word && w.pos_definition);
+
+                    if (!wordsToInsert.length) return alert("解析失败，无有效单词与词义表头！");
+
+                    const { error } = await db.from('words').insert(wordsToInsert);
+                    if (error) throw error;
+
+                    alert(`成功上传并写入 ${wordsToInsert.length} 个单词至云数据库！`);
+                    fileInput.value = '';
+                    onStudyBookChange();
+                } catch (err) {
+                    alert("导入出错: " + err.message);
+                }
             };
             reader.readAsArrayBuffer(fileInput.files[0]);
         }
 
-        // 新建词书
-        async function createWordbook() {
-            const name = document.getElementById('new-book-name').value.trim();
-            const level = document.getElementById('new-book-level').value;
-            const description = document.getElementById('new-book-desc').value.trim();
-            if (!name) return alert("请输入词书名称");
-
-            const { error } = await db.from('wordbooks').insert([{ name, level, description }]);
-            if (error) return alert("创建失败: " + error.message);
-            alert("词书创建成功！");
-            fetchWordbooks();
+        function downloadExcelTemplate() {
+            const templateData = [{
+                "word": "abandon",
+                "us_phonetic": "/əˈbændən/",
+                "uk_phonetic": "/əˈbændən/",
+                "pos_definition": "vt. 放弃，遗弃；n. 放任",
+                "explanation": "学术高频词汇，指完全放弃原有的规划或信念",
+                "example": "Never abandon hope under difficult circumstances.",
+                "example_translation": "在艰难处境下也绝不要放弃希望。"
+            }];
+            const worksheet = XLSX.utils.json_to_sheet(templateData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "词书范本");
+            XLSX.writeFile(workbook, "RenAiTong_Wordbook_Template.xlsx");
         }
 
-        function renderWordbookTable() {
-            const box = document.getElementById('wordbooks-list-table');
-            box.innerHTML = wordbooks.map(b => `
-                <div class="py-3 flex justify-between items-center">
-                    <div>
-                        <span class="font-bold text-slate-800">${b.name}</span>
-                        <span class="text-xs bg-slate-100 border px-2 py-0.5 rounded ml-2">${b.level}</span>
-                    </div>
-                    <button onclick="deleteWordbook('${b.id}')" class="text-xs text-red-600 hover:underline">删除</button>
-                </div>
-            `).join('');
+        // 背诵逻辑
+        async function onStudyBookChange() {
+            const bookId = document.getElementById('study-book-select').value;
+            const batchSize = parseInt(document.getElementById('study-batch-size').value) || 10;
+            if (!bookId) return;
+
+            const { data, error } = await db.from('words').select('*').eq('book_id', bookId).limit(batchSize);
+            if (error || !data || !data.length) {
+                document.getElementById('word-card').classList.add('hidden');
+                document.getElementById('empty-study-state').classList.remove('hidden');
+                return;
+            }
+
+            currentWords = data;
+            currentWordIndex = 0;
+            document.getElementById('empty-study-state').classList.add('hidden');
+            document.getElementById('word-card').classList.remove('hidden');
+            renderCurrentWord();
         }
 
-        async function deleteWordbook(id) {
-            if (!confirm("确定删除该词书吗？")) return;
-            await db.from('wordbooks').delete().eq('id', id);
-            fetchWordbooks();
+        function renderCurrentWord() {
+            if (currentWordIndex >= currentWords.length) {
+                alert("恭喜完成本组打卡目标！");
+                currentWordIndex = 0;
+            }
+            const word = currentWords[currentWordIndex];
+            document.getElementById('card-word').innerText = word.word;
+            document.getElementById('card-us-phone').innerText = `美 [ ${word.us_phonetic || '-'} ]`;
+            document.getElementById('card-uk-phone').innerText = `英 [ ${word.uk_phonetic || '-'} ]`;
+            document.getElementById('card-definition').innerText = word.pos_definition;
+            document.getElementById('card-explanation').innerText = word.explanation || '暂无额外说明';
+            document.getElementById('card-example').innerText = word.example ? `"${word.example}"` : '---';
+            document.getElementById('card-example-trans').innerText = word.example_translation || '';
+
+            document.getElementById('study-progress-count').innerText = currentWordIndex + 1;
+            document.getElementById('study-total-count').innerText = currentWords.length;
         }
 
-        // 打卡海报渲染与二维码生成
+        function handleWordAction(known) {
+            if (!known) wrongWords.push(currentWords[currentWordIndex]);
+            currentWordIndex++;
+            renderCurrentWord();
+        }
+
+        // TTS 真实发音引擎（支持美音/英音）
+        function speakWord(type) {
+            const word = document.getElementById('card-word').innerText;
+            if (!word) return;
+            const msg = new SpeechSynthesisUtterance(word);
+            msg.lang = type === 'us' ? 'en-US' : 'en-GB';
+            window.speechSynthesis.speak(msg);
+        }
+
+        // 温习模式
+        function startReviewMode(mode) {
+            if (!currentWords.length) return alert("请先在背诵区载入单词！");
+            document.getElementById('review-empty-box').classList.add('hidden');
+            document.getElementById('review-quiz-box').classList.remove('hidden');
+
+            const target = currentWords[Math.floor(Math.random() * currentWords.length)];
+            const questionBox = document.getElementById('quiz-question');
+            const optionsBox = document.getElementById('quiz-options');
+
+            if (mode === 'en-to-cn') {
+                questionBox.innerText = target.word;
+                let opts = [target.pos_definition];
+                while(opts.length < 4) {
+                    let r = currentWords[Math.floor(Math.random() * currentWords.length)].pos_definition;
+                    if (!opts.includes(r)) opts.push(r);
+                }
+                opts.sort(() => Math.random() - 0.5);
+                optionsBox.innerHTML = opts.map(o => `
+                    <button onclick="checkAnswer('${o === target.pos_definition}')" class="p-3 bg-white border rounded-lg text-left hover:bg-slate-100 text-xs">${o}</button>
+                `).join('');
+            } else {
+                questionBox.innerText = target.pos_definition;
+                let opts = [target.word];
+                while(opts.length < 4) {
+                    let r = currentWords[Math.floor(Math.random() * currentWords.length)].word;
+                    if (!opts.includes(r)) opts.push(r);
+                }
+                opts.sort(() => Math.random() - 0.5);
+                optionsBox.innerHTML = opts.map(o => `
+                    <button onclick="checkAnswer('${o === target.word}')" class="p-3 bg-white border rounded-lg text-center hover:bg-slate-100 text-sm font-bold font-mono">${o}</button>
+                `).join('');
+            }
+        }
+
+        function checkAnswer(isCorrect) {
+            if (isCorrect === 'true') alert("回答正确！🎉");
+            else alert("回答错误，请再接再厉！");
+            startReviewMode('en-to-cn');
+        }
+
+        // 沪江海报与二维码生成
         function initQRCode() {
-            document.getElementById('qrcode-box').innerHTML = '';
-            new QRCode(document.getElementById('qrcode-box'), {
+            document.getElementById('qrcode-container').innerHTML = '';
+            new QRCode(document.getElementById('qrcode-container'), {
                 text: "https://untholionleen.github.io/ratong/",
-                width: 60,
-                height: 60
+                width: 50,
+                height: 50
             });
         }
 
-        function renderPosterData() {
-            document.getElementById('poster-username').innerText = currentUser.username;
-            document.getElementById('poster-today-count').innerText = todayLearnedCount;
+        function generatePoster() {
             document.getElementById('poster-date').innerText = new Date().toISOString().split('T')[0];
-            
-            // 基于真实的打卡数与计算
-            const beat = Math.min(99.9, (75 + todayLearnedCount * 0.8)).toFixed(1);
-            document.getElementById('poster-beat-percent').innerText = `${beat}%`;
+            document.getElementById('poster-today-count').innerText = currentWordIndex;
+            document.getElementById('poster-days-count').innerText = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('poster-modal').classList.remove('hidden');
         }
 
-        function downloadPoster() {
-            html2canvas(document.getElementById('poster-card')).then(canvas => {
-                const a = document.createElement('a');
-                a.href = canvas.toDataURL('image/png');
-                a.download = `Rentong_Checkin_${new Date().toISOString().split('T')[0]}.png`;
-                a.click();
-            });
+        function closePosterModal() {
+            document.getElementById('poster-modal').classList.add('hidden');
         }
     </script>
 </body>
