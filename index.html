@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仁爱通 - 单词打卡与学术词汇系统</title>
-    <!-- Tailwind CSS -->
+    <title>仁爱通 - 学术英语单词打卡与复盘系统</title>
+    <!-- Tailwind CSS 自适应框架 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS -->
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS (Excel解析) -->
+    <!-- SheetJS (Excel 解析与模板导出) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- QRCode.js (海报二维码) -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <!-- html2canvas (海报导出) -->
+    <!-- QRCode.js (海报二维码生成) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- html2canvas (打卡海报截图导出) -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <!-- FontAwesome 图标 -->
+    <!-- FontAwesome 图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #1e293b; }
@@ -25,74 +26,101 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-slate-800 selection:text-white">
 
-    <!-- 顶栏导航 -->
+    <!-- 顶部导航栏 -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa-solid fa-graduation-cap text-slate-800 text-2xl"></i>
                 <div>
-                    <span class="serif-title font-bold text-lg tracking-wider text-slate-900 block leading-tight">仁爱通 · 词汇大师</span>
-                    <span class="text-[10px] text-slate-400 font-mono">Academic Lexicon System</span>
+                    <span class="serif-title font-bold text-lg tracking-wider text-slate-900 block leading-none">仁爱通 · Academic Lexicon</span>
+                    <span class="text-[10px] text-slate-400">学术四六级/考研云打卡平台</span>
                 </div>
             </div>
             
             <nav id="main-nav" class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
-                <button onclick="switchTab('study')" id="tab-study" class="text-slate-900 border-b-2 border-slate-900 pb-1"><i class="fa-solid fa-book-open mr-1.5"></i>背诵打卡</button>
-                <button onclick="switchTab('review')" id="tab-review" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-brain mr-1.5"></i>温习巩固</button>
-                <button onclick="switchTab('manage')" id="tab-manage" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-database mr-1.5"></i>词书管理</button>
-                <button onclick="switchTab('poster')" id="tab-poster" class="hover:text-slate-900 pb-1"><i class="fa-solid fa-share-nodes mr-1.5"></i>生成海报</button>
+                <button onclick="switchTab('study')" id="tab-study" class="hover:text-slate-900 text-slate-900 border-b-2 border-slate-900 pb-1">
+                    <i class="fa-solid fa-book-open mr-1.5"></i>背诵打卡
+                </button>
+                <button onclick="switchTab('review')" id="tab-review" class="hover:text-slate-900 pb-1">
+                    <i class="fa-solid fa-brain mr-1.5"></i>温习与错题
+                </button>
+                <button onclick="switchTab('manage')" id="tab-manage" class="hover:text-slate-900 pb-1">
+                    <i class="fa-solid fa-database mr-1.5"></i>词书管理
+                </button>
+                <button onclick="switchTab('poster')" id="tab-poster" class="hover:text-slate-900 pb-1">
+                    <i class="fa-solid fa-share-nodes mr-1.5"></i>打卡海报
+                </button>
             </nav>
 
             <div id="user-header-info" class="flex items-center space-x-3 text-xs">
-                <!-- 用户登录状态显示 -->
+                <!-- 用户状态展示区 -->
             </div>
         </div>
     </header>
 
     <!-- 主体内容 -->
     <main class="max-w-5xl mx-auto w-full px-4 py-6 flex-1">
-
-        <!-- 登录与注册模块 -->
-        <section id="view-auth" class="max-w-md mx-auto my-8 bg-white p-8 rounded-xl academic-border space-y-6">
+        
+        <!-- SECTION 0: 用户登录与注册模块 -->
+        <section id="view-auth" class="max-w-md mx-auto my-8 bg-white p-6 md:p-8 rounded-xl academic-border space-y-6">
             <div class="text-center space-y-2">
                 <h2 class="serif-title text-2xl font-bold text-slate-900">欢迎登录仁爱通</h2>
-                <p class="text-xs text-slate-500">高效助力四六级、考研与学术词汇突破</p>
+                <p class="text-xs text-slate-500">学术英语四六级 / 考研单词打卡系统</p>
             </div>
-            <div class="space-y-4">
+
+            <!-- Tab 切换登录与注册 -->
+            <div class="flex border-b text-sm font-medium">
+                <button onclick="toggleAuthForm('login')" id="btn-show-login" class="w-1/2 py-2 text-center border-b-2 border-slate-900 text-slate-900">登录账号</button>
+                <button onclick="toggleAuthForm('register')" id="btn-show-reg" class="w-1/2 py-2 text-center text-slate-400">注册新账号</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <div id="form-login" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">账号 / 用户名</label>
-                    <input id="auth-username" type="text" placeholder="请输入用户名" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">用户名 / 账号</label>
+                    <input id="login-username" type="text" placeholder="请输入您的用户名" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">密码</label>
-                    <input id="auth-password" type="password" placeholder="请输入密码" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+                    <input id="login-password" type="password" placeholder="请输入密码" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
                 </div>
-                <div id="reg-confirm-box" class="hidden">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-semibold text-slate-600">确认密码 (注册二次验证)</label>
-                        <button onclick="generateRandomPassword()" class="text-[11px] text-indigo-600 hover:underline">一键生成 6 位强密码</button>
-                    </div>
-                    <input id="auth-password-confirm" type="password" placeholder="请再次输入密码" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <button id="btn-login" onclick="handleLogin()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">登录</button>
-                    <button id="btn-toggle-reg" onclick="toggleRegisterMode()" class="w-full border border-slate-300 text-slate-700 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50">切换到注册</button>
-                </div>
-                <p class="text-[11px] text-slate-400 text-center">使用遇到疑问或反馈，请联系客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
+                <button onclick="handleLogin()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800">立即登录</button>
             </div>
+
+            <!-- 注册表单 (包含两次密码校验与推荐密码) -->
+            <div id="form-register" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">设置用户名</label>
+                    <input id="reg-username" type="text" placeholder="设置您的独特性账号" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-600">设置密码</label>
+                        <button onclick="generateRandomPassword()" class="text-[11px] text-indigo-600 hover:underline">推荐强密码</button>
+                    </div>
+                    <input id="reg-password" type="text" placeholder="输入密码" class="w-full border rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-slate-800 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">确认密码 (再次输入)</label>
+                    <input id="reg-password-confirm" type="password" placeholder="请再次输入相同密码" class="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-slate-800 outline-none">
+                </div>
+                <button onclick="handleRegister()" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-800">注册并登录</button>
+            </div>
+
+            <p class="text-[11px] text-slate-400 text-center border-t pt-3">如遇到使用问题，请联系客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
         </section>
 
-        <!-- 1. 单词背诵界面 -->
+        <!-- SECTION 1: 单词背诵打卡 -->
         <section id="view-study" class="hidden space-y-6">
-            <div class="bg-white p-5 rounded-xl academic-border grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <!-- 目标设置与进度 -->
+            <div class="bg-white p-4 md:p-5 rounded-xl academic-border grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">选择词书</label>
-                    <select id="study-book-select" onchange="loadBookWords()" class="w-full bg-slate-50 border text-slate-800 text-sm rounded-lg p-2 font-medium"></select>
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">选择目标词书</label>
+                    <select id="study-book-select" onchange="loadBookWords()" class="w-full bg-slate-50 border text-slate-800 text-xs md:text-sm rounded-lg p-2 font-medium"></select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">本次背诵量 (每组)</label>
-                    <select id="study-batch-size" onchange="resetBatch()" class="w-full bg-slate-50 border text-slate-800 text-sm rounded-lg p-2 font-medium">
+                    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">单组背诵量</label>
+                    <select id="study-batch-size" onchange="resetBatch()" class="w-full bg-slate-50 border text-slate-800 text-xs md:text-sm rounded-lg p-2 font-medium">
                         <option value="5">5 个 / 组</option>
                         <option value="10" selected>10 个 / 组</option>
                         <option value="15">15 个 / 组</option>
@@ -100,26 +128,27 @@
                     </select>
                 </div>
                 <div class="text-right flex flex-col justify-center">
-                    <span class="text-xs text-slate-400 font-medium">预计完成全书时间</span>
+                    <span class="text-xs text-slate-400">预计完成全书时间</span>
                     <span id="estimated-time" class="text-sm font-bold text-slate-800 font-mono">计算中...</span>
                 </div>
             </div>
 
-            <div id="study-card-container" class="max-w-xl mx-auto min-h-[380px] flex items-center justify-center">
-                <div id="word-card" class="w-full bg-white rounded-xl academic-border p-8 space-y-6 relative border-t-4 border-t-slate-800">
+            <!-- 卡片交互主体 -->
+            <div id="word-card-container" class="max-w-xl mx-auto min-h-[380px] flex items-center justify-center">
+                <div id="word-card" class="w-full bg-white rounded-xl academic-border p-6 md:p-8 space-y-6 relative border-t-4 border-t-slate-800">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h2 id="card-word" class="serif-title text-4xl font-bold text-slate-900">word</h2>
+                            <h2 id="card-word" class="serif-title text-3xl md:text-4xl font-bold text-slate-900">word</h2>
                             <div class="flex space-x-3 text-xs text-slate-500 font-mono mt-2">
-                                <button onclick="speakTTS('us')" class="hover:text-slate-900"><i class="fa-solid fa-volume-high text-indigo-500 mr-1"></i>美 <span id="card-us-phone">[-]</span></button>
-                                <button onclick="speakTTS('uk')" class="hover:text-slate-900"><i class="fa-solid fa-volume-high text-emerald-500 mr-1"></i>英 <span id="card-uk-phone">[-]</span></button>
+                                <button onclick="speakTTS('us')" class="hover:text-slate-900 bg-slate-50 px-2 py-1 rounded border"><i class="fa-solid fa-volume-high text-indigo-500 mr-1"></i>美 <span id="card-us-phone">[-]</span></button>
+                                <button onclick="speakTTS('uk')" class="hover:text-slate-900 bg-slate-50 px-2 py-1 rounded border"><i class="fa-solid fa-volume-high text-emerald-500 mr-1"></i>英 <span id="card-uk-phone">[-]</span></button>
                             </div>
                         </div>
                         <span id="batch-progress" class="text-xs bg-slate-100 font-mono px-2.5 py-1 rounded-full text-slate-600">1 / 10</span>
                     </div>
 
-                    <div id="card-details" class="space-y-3 pt-2">
-                        <p id="card-pos-def" class="text-slate-800 font-medium text-base">vt. 放弃，遗弃</p>
+                    <div id="card-details" class="space-y-3 pt-2 border-t border-slate-100">
+                        <p id="card-pos-def" class="text-slate-800 font-medium text-base">---</p>
                         <div class="bg-slate-50 p-3 rounded-lg border text-xs text-slate-600">
                             <span class="font-semibold text-slate-700">学术解析：</span><span id="card-explanation">--</span>
                         </div>
@@ -130,17 +159,17 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-                        <button onclick="recordWordResult(false)" class="py-2.5 border rounded-lg text-slate-700 font-medium hover:bg-slate-50"><i class="fa-solid fa-xmark text-red-500 mr-1.5"></i>不认识</button>
-                        <button onclick="recordWordResult(true)" class="py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800"><i class="fa-solid fa-check text-green-400 mr-1.5"></i>记住了</button>
+                        <button onclick="recordWordResult(false)" class="py-2.5 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 text-sm"><i class="fa-solid fa-xmark mr-1.5"></i>不认识 (存错题)</button>
+                        <button onclick="recordWordResult(true)" class="py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 text-sm"><i class="fa-solid fa-check text-green-400 mr-1.5"></i>掌握了 (下一个)</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 2. 温习巩固模块 -->
+        <!-- SECTION 2: 温习与错题复盘 -->
         <section id="view-review" class="hidden max-w-xl mx-auto space-y-6">
             <div class="bg-white p-4 rounded-xl academic-border flex justify-between items-center">
-                <span class="font-bold text-slate-800 text-sm">温习测试模式</span>
+                <span class="font-bold text-slate-800 text-sm">温习巩固模式</span>
                 <div class="space-x-2">
                     <button onclick="startReview('en2cn')" class="px-3 py-1 bg-slate-800 text-white rounded text-xs">看英选中</button>
                     <button onclick="startReview('cn2en')" class="px-3 py-1 border text-slate-700 rounded text-xs">看中选英</button>
@@ -149,12 +178,12 @@
             </div>
 
             <div id="quiz-card" class="bg-white p-8 rounded-xl academic-border space-y-6">
-                <div id="quiz-question" class="text-center font-bold text-2xl text-slate-900">Question</div>
+                <div id="quiz-question" class="text-center font-bold text-2xl text-slate-900">请选择测试模式</div>
                 <div id="quiz-options" class="grid grid-cols-1 gap-3"></div>
             </div>
         </section>
 
-        <!-- 3. 词书管理与 Excel 上传 -->
+        <!-- SECTION 3: 词书与 Excel 云端管理 -->
         <section id="view-manage" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-6 rounded-xl academic-border space-y-4">
@@ -164,31 +193,31 @@
                         <option value="CET-4">CET-4 (四级)</option>
                         <option value="CET-6">CET-6 (六级)</option>
                         <option value="KYYY">考研英语</option>
-                        <option value="IELTS">雅思/托福</option>
+                        <option value="IELTS">雅思 / 托福</option>
                     </select>
                     <textarea id="new-book-desc" placeholder="词书简介..." class="w-full border p-2 text-sm rounded-lg" rows="2"></textarea>
-                    <button onclick="createWordbook()" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm">创建词书</button>
+                    <button onclick="createWordbook()" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm">创建新词书</button>
                 </div>
 
                 <div class="bg-white p-6 rounded-xl academic-border space-y-4">
                     <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-bold text-slate-900"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>2. 导入 Excel 词库</h3>
-                        <button onclick="downloadTemplate()" class="text-xs text-indigo-600 underline">下载标准范本</button>
+                        <h3 class="font-bold text-slate-900"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>2. 导入 Excel 字典</h3>
+                        <button onclick="downloadTemplate()" class="text-xs text-indigo-600 underline">下载标准 Excel 范本</button>
                     </div>
                     <select id="import-target-book" class="w-full border p-2 text-sm rounded-lg"></select>
                     <input id="excel-file-input" type="file" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500 border p-2 rounded-lg">
-                    <button onclick="importExcel()" class="w-full bg-emerald-700 text-white py-2 rounded-lg text-sm">解析并提交至云端</button>
+                    <button onclick="importExcel()" class="w-full bg-emerald-700 text-white py-2 rounded-lg text-sm">解析并同步写入云端</button>
                 </div>
             </div>
 
-            <!-- 词书列表 -->
+            <!-- 云端词书管理列表 -->
             <div class="bg-white p-6 rounded-xl academic-border space-y-4">
-                <h3 class="font-bold text-slate-900 border-b pb-2">云端现有词库</h3>
+                <h3 class="font-bold text-slate-900 border-b pb-2">云端已存词库</h3>
                 <div id="wordbooks-list-table" class="divide-y text-sm"></div>
             </div>
         </section>
 
-        <!-- 4. 沪江风格打卡海报生成 -->
+        <!-- SECTION 4: 沪江风格打卡海报生成 -->
         <section id="view-poster" class="hidden space-y-6 max-w-lg mx-auto">
             <div id="poster-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white p-8 rounded-2xl shadow-2xl space-y-6 relative overflow-hidden">
                 <div class="flex justify-between items-center border-b border-white/10 pb-4">
@@ -200,7 +229,7 @@
                 </div>
 
                 <div class="space-y-4 py-2">
-                    <p class="text-xs text-slate-300">学习者：<span id="poster-username" class="font-bold text-white">--</span></p>
+                    <p class="text-xs text-slate-300">打卡学员：<span id="poster-username" class="font-bold text-white">--</span></p>
                     <div class="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
                         <div>
                             <p class="text-[10px] text-slate-400">今日打卡单词</p>
@@ -220,26 +249,28 @@
                 <div class="flex items-center justify-between border-t border-white/10 pt-4">
                     <div class="space-y-1">
                         <p class="text-xs font-bold text-white">扫码加入“仁爱通”</p>
-                        <p class="text-[10px] text-slate-400">一起高效突破四六级/考研词汇</p>
+                        <p class="text-[10px] text-slate-400">一起助力四六级与考研突破</p>
                     </div>
                     <div id="qrcode-box" class="bg-white p-1 rounded-lg"></div>
                 </div>
             </div>
 
             <button onclick="downloadPoster()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-medium shadow flex items-center justify-center space-x-2">
-                <i class="fa-solid fa-download"></i><span>保存打卡海报图片</span>
+                <i class="fa-solid fa-download"></i><span>下载保存打卡海报图片</span>
             </button>
         </section>
 
     </main>
 
+    <!-- 页脚与客服入口 -->
     <footer class="bg-white border-t py-4 text-center text-xs text-slate-400 space-y-1">
         <p>仁爱通 (Rentong) Academic Lexicon &copy; 2026 Open Source Project.</p>
-        <p>反馈与建议客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
+        <p>意见反馈与问题提交客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
     </footer>
 
+    <!-- JavaScript 核心逻辑 -->
     <script>
-        // 初始化 Supabase 数据库连接
+        // Supabase Client 初始化 (基于您提供的凭证)
         const SUPABASE_URL = "https://zqrhfcsrexoamizkzzhq.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcmhmY3NyZXhvYW1pemt6emhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY3MDUsImV4cCI6MjEwNjAwMjcwNX0.Hw3mBAy3mJvPa7SeVOdfArq-fc8G6sff77SfWqWeZ_M";
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -249,7 +280,6 @@
         let currentWords = [];
         let currentIndex = 0;
         let todayLearnedCount = 0;
-        let isRegisteringMode = false;
 
         window.addEventListener('DOMContentLoaded', async () => {
             updateUserUI();
@@ -257,51 +287,56 @@
             initQRCode();
         });
 
-        function toggleRegisterMode() {
-            isRegisteringMode = !isRegisteringMode;
-            const confirmBox = document.getElementById('reg-confirm-box');
-            const btnLogin = document.getElementById('btn-login');
-            const btnToggle = document.getElementById('btn-toggle-reg');
-
-            if (isRegisteringMode) {
-                confirmBox.classList.remove('hidden');
-                btnLogin.innerText = "完成注册并登录";
-                btnToggle.innerText = "切换回登录";
+        // 切换登录/注册表单
+        function toggleAuthForm(mode) {
+            if (mode === 'login') {
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('form-register').classList.add('hidden');
+                document.getElementById('btn-show-login').className = "w-1/2 py-2 text-center border-b-2 border-slate-900 text-slate-900 font-medium";
+                document.getElementById('btn-show-reg').className = "w-1/2 py-2 text-center text-slate-400";
             } else {
-                confirmBox.classList.add('hidden');
-                btnLogin.innerText = "登录";
-                btnToggle.innerText = "切换到注册";
+                document.getElementById('form-register').classList.remove('hidden');
+                document.getElementById('form-login').classList.add('hidden');
+                document.getElementById('btn-show-reg').className = "w-1/2 py-2 text-center border-b-2 border-slate-900 text-slate-900 font-medium";
+                document.getElementById('btn-show-login').className = "w-1/2 py-2 text-center text-slate-400";
             }
         }
 
+        // 生成推荐强密码
         function generateRandomPassword() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
             let pwd = '';
-            for (let i = 0; i < 6; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-            document.getElementById('auth-password').value = pwd;
-            document.getElementById('auth-password-confirm').value = pwd;
+            for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            document.getElementById('reg-password').value = pwd;
+            document.getElementById('reg-password-confirm').value = pwd;
         }
 
+        // 注册 (包含两次密码校验)
+        async function handleRegister() {
+            const u = document.getElementById('reg-username').value.trim();
+            const p1 = document.getElementById('reg-password').value.trim();
+            const p2 = document.getElementById('reg-password-confirm').value.trim();
+
+            if (!u || !p1 || !p2) return alert("请填写完整的注册信息");
+            if (p1 !== p2) return alert("两次输入的密码不一致，请重新核对！");
+
+            const { data, error } = await db.from('app_users').insert([{ username: u, password_hash: p1 }]).select();
+            if (error) return alert("注册失败 (用户名可能已存在): " + error.message);
+            
+            alert("注册成功！已自动登录");
+            currentUser = data[0];
+            localStorage.setItem('rentong_user', JSON.stringify(currentUser));
+            updateUserUI();
+        }
+
+        // 登录
         async function handleLogin() {
-            const u = document.getElementById('auth-username').value.trim();
-            const p = document.getElementById('auth-password').value.trim();
-            if (!u || !p) return alert("请输入完整账号和密码");
-
-            if (isRegisteringMode) {
-                const pConf = document.getElementById('auth-password-confirm').value.trim();
-                if (p !== pConf) return alert("两次输入的密码不一致！");
-
-                const { data, error } = await db.from('app_users').insert([{ username: u, password_hash: p }]).select();
-                if (error) return alert("注册失败 (用户名可能已被占用): " + error.message);
-                
-                alert("注册成功！已为您自动登录");
-                currentUser = data[0];
-            } else {
-                const { data, error } = await db.from('app_users').select('*').eq('username', u).eq('password_hash', p);
-                if (error || !data.length) return alert("账号或密码错误");
-                currentUser = data[0];
-            }
-
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const { data, error } = await db.from('app_users').select('*').eq('username', u).eq('password_hash', p);
+            
+            if (error || !data.length) return alert("用户名或密码不正确");
+            currentUser = data[0];
             localStorage.setItem('rentong_user', JSON.stringify(currentUser));
             updateUserUI();
         }
@@ -318,7 +353,7 @@
             if (currentUser) {
                 header.innerHTML = `
                     <span class="font-medium text-slate-700"><i class="fa-solid fa-user-check mr-1 text-emerald-600"></i>${currentUser.username}</span>
-                    <button onclick="handleLogout()" class="text-slate-400 hover:text-slate-700">退出</button>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-slate-700 underline">退出</button>
                 `;
                 nav.classList.remove('hidden');
                 document.getElementById('view-auth').classList.add('hidden');
@@ -342,6 +377,7 @@
             if (tab === 'poster') renderPosterData();
         }
 
+        // 加载云端词书
         async function fetchWordbooks() {
             const { data } = await db.from('wordbooks').select('*').order('created_at', { ascending: false });
             wordbooks = data || [];
@@ -357,6 +393,7 @@
             renderWordbookTable();
         }
 
+        // 加载选定词书的单词
         async function loadBookWords() {
             const bookId = document.getElementById('study-book-select').value;
             if (!bookId) return;
@@ -374,7 +411,7 @@
                 return;
             }
             if (currentIndex >= currentWords.length) {
-                alert("已完成当前组的单词背诵！");
+                alert("恭喜！已完成当前词书所有组的打卡！");
                 currentIndex = 0;
             }
             const w = currentWords[currentIndex];
@@ -382,7 +419,7 @@
             document.getElementById('card-us-phone').innerText = `/${w.us_phonetic || '-'}/`;
             document.getElementById('card-uk-phone').innerText = `/${w.uk_phonetic || '-'}/`;
             document.getElementById('card-pos-def').innerText = w.pos_def;
-            document.getElementById('card-explanation').innerText = w.explanation || '暂无学术解析';
+            document.getElementById('card-explanation').innerText = w.explanation || '暂无详细解释';
             document.getElementById('card-example').innerText = w.example ? `"${w.example}"` : '';
             document.getElementById('card-example-trans').innerText = w.example_trans || '';
 
@@ -390,15 +427,26 @@
             document.getElementById('batch-progress').innerText = `${(currentIndex % batchSize) + 1} / ${batchSize}`;
         }
 
-        function recordWordResult(known) {
+        // 背诵按钮交互与数据统计
+        async function recordWordResult(known) {
             todayLearnedCount++;
+            if (!known && currentUser && currentWords[currentIndex]) {
+                // 将错题同步保存至云端 user_progress 表
+                await db.from('user_progress').upsert({
+                    user_id: currentUser.id,
+                    book_id: currentWords[currentIndex].book_id,
+                    word_id: currentWords[currentIndex].id,
+                    status: 'wrong'
+                });
+            }
             currentIndex++;
             renderCurrentWord();
         }
 
+        // Web Speech TTS 真实音标朗读
         function speakTTS(type) {
             const word = document.getElementById('card-word').innerText;
-            if (!word) return;
+            if (!word || word === "暂无单词") return;
             const u = new SpeechSynthesisUtterance(word);
             u.lang = type === 'us' ? 'en-US' : 'en-GB';
             window.speechSynthesis.speak(u);
@@ -417,13 +465,14 @@
             calculateEstimateTime();
         }
 
+        // 下载标准 Excel 模板
         function downloadTemplate() {
             const data = [{
                 "word": "abandon",
                 "us_phonetic": "/əˈbændən/",
                 "uk_phonetic": "/əˈbændən/",
                 "pos_def": "vt. 放弃，遗弃；n. 放任",
-                "explanation": "彻底放弃原本持有的事物或计划",
+                "explanation": "彻底放弃原本持有的事物",
                 "example": "Never abandon hope.",
                 "example_trans": "永远不要放弃希望。"
             }];
@@ -433,6 +482,7 @@
             XLSX.writeFile(wb, "Rentong_Wordbook_Template.xlsx");
         }
 
+        // 导入 Excel 词库
         async function importExcel() {
             const targetBookId = document.getElementById('import-target-book').value;
             const fileInput = document.getElementById('excel-file-input');
@@ -457,12 +507,13 @@
 
                 const { error } = await db.from('words').insert(formatted);
                 if (error) return alert("导入失败: " + error.message);
-                alert(`成功导入 ${formatted.length} 个单词！`);
+                alert(`成功导入 ${formatted.length} 个单词至云端！`);
                 loadBookWords();
             };
             reader.readAsArrayBuffer(fileInput.files[0]);
         }
 
+        // 新建词书
         async function createWordbook() {
             const name = document.getElementById('new-book-name').value.trim();
             const level = document.getElementById('new-book-level').value;
@@ -489,11 +540,56 @@
         }
 
         async function deleteWordbook(id) {
-            if (!confirm("确定删除该词书吗？")) return;
+            if (!confirm("确定删除该词书及其关联的单词吗？")) return;
             await db.from('wordbooks').delete().eq('id', id);
             fetchWordbooks();
         }
 
+        // 三合一温习测验模式
+        function startReview(mode) {
+            if (!currentWords.length) return alert("当前词书无可用单词，请先载入词书！");
+            const target = currentWords[Math.floor(Math.random() * currentWords.length)];
+            const qBox = document.getElementById('quiz-question');
+            const oBox = document.getElementById('quiz-options');
+
+            if (mode === 'en2cn') {
+                qBox.innerText = target.word;
+                let opts = [target.pos_def];
+                while(opts.length < 4) {
+                    let rand = currentWords[Math.floor(Math.random() * currentWords.length)].pos_def;
+                    if (!opts.includes(rand)) opts.push(rand);
+                }
+                opts.sort(() => Math.random() - 0.5);
+                oBox.innerHTML = opts.map(o => `<button onclick="checkQuiz('${o === target.pos_def}')" class="p-3 border rounded-lg text-left text-sm hover:bg-slate-50">${o}</button>`).join('');
+            } else if (mode === 'cn2en') {
+                qBox.innerText = target.pos_def;
+                let opts = [target.word];
+                while(opts.length < 4) {
+                    let rand = currentWords[Math.floor(Math.random() * currentWords.length)].word;
+                    if (!opts.includes(rand)) opts.push(rand);
+                }
+                opts.sort(() => Math.random() - 0.5);
+                oBox.innerHTML = opts.map(o => `<button onclick="checkQuiz('${o === target.word}')" class="p-3 border rounded-lg font-mono font-bold text-sm hover:bg-slate-50">${o}</button>`).join('');
+            } else if (mode === 'audio') {
+                qBox.innerHTML = `<button onclick="speakTTS('us')" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm"><i class="fa-solid fa-volume-high mr-2"></i>点击播放读音</button>`;
+                speakTTS('us');
+                let opts = [target.pos_def];
+                while(opts.length < 4) {
+                    let rand = currentWords[Math.floor(Math.random() * currentWords.length)].pos_def;
+                    if (!opts.includes(rand)) opts.push(rand);
+                }
+                opts.sort(() => Math.random() - 0.5);
+                oBox.innerHTML = opts.map(o => `<button onclick="checkQuiz('${o === target.pos_def}')" class="p-3 border rounded-lg text-left text-sm hover:bg-slate-50">${o}</button>`).join('');
+            }
+        }
+
+        function checkQuiz(isCorrect) {
+            if (isCorrect === 'true') alert("回答正确！🎉");
+            else alert("回答错误，再接再厉！");
+            startReview('en2cn');
+        }
+
+        // 海报二维码初始化与生成
         function initQRCode() {
             document.getElementById('qrcode-box').innerHTML = '';
             new QRCode(document.getElementById('qrcode-box'), {
@@ -504,10 +600,11 @@
         }
 
         function renderPosterData() {
-            document.getElementById('poster-username').innerText = currentUser.username;
+            document.getElementById('poster-username').innerText = currentUser ? currentUser.username : "学习者";
             document.getElementById('poster-today-count').innerText = todayLearnedCount;
             document.getElementById('poster-date').innerText = new Date().toISOString().split('T')[0];
-            const beat = Math.min(99.9, (75 + todayLearnedCount * 0.8)).toFixed(1);
+            
+            const beat = Math.min(99.9, (78.0 + todayLearnedCount * 0.5)).toFixed(1);
             document.getElementById('poster-beat-percent').innerText = `${beat}%`;
         }
 
