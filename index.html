@@ -3,598 +3,544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仁爱通 - 学术单词打卡系统 (Academic Lexicon)</title>
+    <title>仁爱通 - 四六级学术英语单词打卡平台</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- SheetJS Excel 解析 -->
+    <!-- SheetJS Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- QRCode 生成库 -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <!-- html2canvas 海报截图生成 -->
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <!-- FontAwesome 图标库 -->
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif; background-color: #f8fafc; color: #0f172a; }
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; color: #0f172a; }
         .serif-title { font-family: 'Cinzel', 'Noto Serif SC', serif; }
-        .academic-card { border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.03); }
-        .blur-mask { filter: blur(6px); transition: filter 0.2s ease; user-select: none; }
-        .blur-mask:hover, .blur-mask.revealed { filter: blur(0); user-select: auto; }
+        .academic-card { border: 1px solid #e2e8f0; box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-slate-800 selection:text-white">
+<body class="min-h-screen flex flex-col justify-between">
 
-    <!-- Header 顶部导航 -->
-    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+    <!-- 顶部导航 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold font-serif text-xl shadow-sm">仁</div>
+                <div class="w-8 h-8 rounded bg-slate-900 text-white flex items-center justify-center font-serif font-bold text-lg">仁</div>
                 <div>
-                    <span class="serif-title font-bold text-base md:text-lg tracking-wider text-slate-900 block leading-none">仁爱通 · 单词机</span>
-                    <span class="text-[10px] text-slate-400 font-mono tracking-tight">Academic Lexicon v4.0</span>
+                    <span class="serif-title font-bold text-base text-slate-900 block leading-tight">仁爱通 - 学术词汇</span>
+                    <span class="text-[10px] text-slate-400 font-mono">Academic Recitation Platform</span>
                 </div>
             </div>
             
-            <nav class="flex items-center space-x-1 md:space-x-3 text-xs md:text-sm font-medium">
-                <button onclick="switchTab('study')" id="tab-study" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-semibold">打卡背诵</button>
-                <button onclick="switchTab('review')" id="tab-review" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100">温习复盘</button>
-                <button onclick="switchTab('manage')" id="tab-manage" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100">词书云管理</button>
-                <button onclick="switchTab('poster')" id="tab-poster" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-share-nodes mr-1"></i>打卡海报</button>
-                <button onclick="openAuthModal()" id="auth-btn" class="ml-2 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">登录 / 注册</button>
+            <nav id="main-nav" class="hidden flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm font-medium">
+                <button onclick="switchTab('study')" id="tab-study" class="px-3 py-1.5 rounded-lg text-slate-900 bg-slate-100 font-semibold">背诵打卡</button>
+                <button onclick="switchTab('review')" id="tab-review" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50">温习强化</button>
+                <button onclick="switchTab('mistakes')" id="tab-mistakes" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50">错题本</button>
+                <button onclick="switchTab('manage')" id="tab-manage" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50">词书管理</button>
+                <button onclick="logout()" class="px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50"><i class="fa-solid fa-right-from-bracket"></i></button>
             </nav>
         </div>
     </header>
 
-    <!-- Main 主体内容 -->
+    <!-- 主体区域 -->
     <main class="max-w-5xl mx-auto w-full px-4 py-6 flex-1">
 
-        <!-- ================= TAB 1: 单词背诵打卡模块 ================= -->
-        <section id="view-study" class="space-y-6">
-            <!-- 头部控制参数盘 -->
-            <div class="bg-white p-5 rounded-2xl academic-card border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+        <!-- AUTH VIEW: 注册登录与验证码模块 -->
+        <section id="view-auth" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl academic-card space-y-6 border border-slate-200">
+            <div class="text-center space-y-1">
+                <h2 class="serif-title text-2xl font-bold text-slate-900">欢迎加入仁爱通</h2>
+                <p class="text-xs text-slate-500">助力英语四六级与学术词汇突破</p>
+            </div>
+
+            <div id="auth-tabs" class="flex border-b border-slate-200 text-sm font-medium">
+                <button id="auth-tab-login" onclick="switchAuthMode('login')" class="flex-1 py-2 text-center text-slate-900 border-b-2 border-slate-900 font-semibold">登录账号</button>
+                <button id="auth-tab-register" onclick="switchAuthMode('register')" class="flex-1 py-2 text-center text-slate-400">注册新用户</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <div id="form-login" class="space-y-4">
                 <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">当前词书与等级</label>
-                    <select id="study-book-select" onchange="onStudyBookChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2 font-medium">
-                        <option value="">加载云端词书...</option>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">用户名 / 邮箱</label>
+                    <input id="login-username" type="text" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">密码</label>
+                    <input id="login-password" type="password" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors">登录系统</button>
+            </div>
+
+            <!-- 注册表单 -->
+            <div id="form-register" class="hidden space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">设置用户名</label>
+                    <input id="reg-username" type="text" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">设置密码 (第一次验证)</label>
+                    <input id="reg-pass1" type="password" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">确认密码 (第二次验证)</label>
+                    <input id="reg-pass2" type="password" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">6位验证码</label>
+                    <div class="flex space-x-2">
+                        <input id="reg-code" type="text" maxlength="6" placeholder="6位数字" class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm font-mono tracking-widest text-center">
+                        <button onclick="sendVerificationCode()" id="btn-send-code" class="bg-slate-100 text-slate-700 text-xs px-3 rounded-lg border hover:bg-slate-200">获取验证码</button>
+                    </div>
+                </div>
+                <button onclick="handleRegister()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors mt-2">完成注册并登录</button>
+            </div>
+        </section>
+
+
+        <!-- STUDY VIEW: 单词打卡 -->
+        <section id="view-study" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-xl academic-card flex flex-wrap items-center justify-between gap-4 border border-slate-200">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">选择词书</label>
+                        <select id="study-book-select" onchange="onStudyBookChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2 font-medium min-w-[180px]"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">单次目标</label>
+                        <select id="study-target-count" onchange="onTargetCountChange()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2 font-medium">
+                            <option value="5">5 个</option>
+                            <option value="10" selected>10 个</option>
+                            <option value="15">15 个</option>
+                            <option value="25">25 个</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400 font-medium">预计天数</div>
+                        <div class="text-sm font-bold text-slate-800"><span id="estimated-days">--</span> 天</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400 font-medium">本次进度</div>
+                        <div class="text-lg font-bold text-slate-800 font-mono"><span id="study-progress-count">0</span> / <span id="study-total-count">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片 -->
+            <div id="word-card-container" class="max-w-2xl mx-auto min-h-[380px]">
+                <div id="empty-study-state" class="bg-white p-12 text-center rounded-xl academic-card space-y-3">
+                    <i class="fa-solid fa-folder-open text-4xl text-slate-300"></i>
+                    <p class="text-slate-500 text-sm">暂无单词或当前词书已背完。</p>
+                </div>
+
+                <div id="word-card" class="hidden bg-white rounded-xl academic-card p-8 flex flex-col justify-between space-y-6 relative border border-slate-200">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-start">
+                            <h2 id="card-word" class="serif-title text-4xl font-bold text-slate-900">word</h2>
+                            <button onclick="toggleCardMask()" class="text-slate-400 hover:text-slate-700 p-2"><i class="fa-solid fa-eye-slash"></i></button>
+                        </div>
+                        <div class="flex space-x-3 text-xs font-mono">
+                            <button onclick="speakWord('us')" class="bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded text-slate-700 flex items-center space-x-1">
+                                <i class="fa-solid fa-volume-high text-slate-500"></i><span>美</span><span id="card-us-phone">[-]</span>
+                            </button>
+                            <button onclick="speakWord('uk')" class="bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded text-slate-700 flex items-center space-x-1">
+                                <i class="fa-solid fa-volume-high text-slate-500"></i><span>英</span><span id="card-uk-phone">[-]</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="card-details-box" class="space-y-3 border-t border-slate-100 pt-4">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">词性与释义</span>
+                            <p id="card-definition" class="text-slate-800 font-semibold text-base leading-relaxed"></p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg text-xs text-slate-600">
+                            <span class="font-semibold block mb-0.5 text-slate-700"><i class="fa-solid fa-graduation-cap mr-1"></i>解析:</span>
+                            <span id="card-explanation"></span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">权威例句</span>
+                            <p id="card-example" class="text-slate-700 italic text-sm font-serif"></p>
+                            <p id="card-example-trans" class="text-slate-500 text-xs mt-0.5"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
+                        <button onclick="handleWordAction(false)" class="py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 text-sm">不认识 (记错)</button>
+                        <button onclick="handleWordAction(true)" class="py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 text-sm">已掌握 (下一个)</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- REVIEW VIEW: 温习模式 -->
+        <section id="view-review" class="hidden space-y-6 max-w-2xl mx-auto">
+            <div class="bg-white p-6 rounded-2xl academic-card border border-slate-200 text-center space-y-6">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="serif-title font-bold text-slate-800">温习强化测试</h3>
+                    <select id="review-mode-select" onchange="initReviewSession()" class="text-xs bg-slate-50 border rounded p-1.5">
+                        <option value="en2cn">看英文选中文</option>
+                        <option value="cn2en">看中文选英文</option>
+                        <option value="audio2en">听发音选英文/中文</option>
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">每日背诵量设置</label>
-                    <div class="flex items-center space-x-2">
-                        <select id="daily-target-select" onchange="updateGoalCalculation()" class="bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2 font-medium">
-                            <option value="5">5 个/天</option>
-                            <option value="10" selected>10 个/天</option>
-                            <option value="15">15 个/天</option>
-                            <option value="25">25 个/天</option>
-                            <option value="custom">自定义</option>
-                        </select>
-                        <input id="custom-target-input" type="number" placeholder="数量" onchange="updateGoalCalculation()" class="hidden w-20 border border-slate-300 rounded-lg p-2 text-sm font-medium">
-                    </div>
+                <div id="review-question-box" class="space-y-4 my-6">
+                    <div id="review-stem" class="serif-title text-3xl font-bold text-slate-900">Prompt</div>
+                    <button id="btn-review-audio" onclick="playReviewAudio()" class="hidden mx-auto bg-slate-100 hover:bg-slate-200 text-slate-700 p-3 rounded-full text-lg"><i class="fa-solid fa-volume-high"></i></button>
                 </div>
 
-                <div class="text-left md:text-right bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <div class="text-xs text-slate-500">预计完成全书: <span id="goal-days-estimate" class="font-bold text-slate-800">-- 天</span></div>
-                    <div class="text-xs text-slate-400 mt-1">今日打卡: <span id="today-learned-count" class="font-bold text-emerald-600">0</span> / <span id="today-goal-count">10</span> 词</div>
-                </div>
-            </div>
-
-            <!-- 背诵主卡片容器 -->
-            <div id="word-card-container" class="max-w-2xl mx-auto min-h-[420px]">
-                <div id="empty-study-state" class="bg-white p-12 text-center rounded-2xl academic-card space-y-4">
-                    <i class="fa-solid fa-book-open text-4xl text-slate-300"></i>
-                    <p class="text-slate-500 text-sm">请选择词书开始学习，或登录账号同步个人进度。</p>
-                </div>
-
-                <div id="word-card" class="hidden bg-white rounded-2xl academic-card p-6 md:p-8 flex flex-col justify-between space-y-6 relative overflow-hidden border border-slate-200">
-                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-slate-900"></div>
-
-                    <!-- 单词与发音 -->
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-start">
-                            <h2 id="card-word" class="serif-title text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">abandon</h2>
-                            <button onclick="toggleMask()" title="切换释义遮挡" class="p-2 text-slate-400 hover:text-slate-700">
-                                <i class="fa-solid fa-eye-slash text-lg"></i>
-                            </button>
-                        </div>
-
-                        <!-- 独立美音/英音发音按键 -->
-                        <div class="flex flex-wrap gap-2 text-xs font-mono">
-                            <button onclick="speakWord('us')" class="flex items-center space-x-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700">
-                                <i class="fa-solid fa-volume-high text-slate-400"></i>
-                                <span class="font-bold text-slate-500">美</span>
-                                <span id="card-us-phone">[/əˈbændən/]</span>
-                            </button>
-                            <button onclick="speakWord('uk')" class="flex items-center space-x-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700">
-                                <i class="fa-solid fa-volume-high text-slate-400"></i>
-                                <span class="font-bold text-slate-500">英</span>
-                                <span id="card-uk-phone">[/əˈbændən/]</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 释义、学术解析与例句 -->
-                    <div id="card-details-body" class="space-y-4 border-t border-slate-100 pt-4 transition-all">
-                        <div>
-                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">词性与词义 (多义) *</span>
-                            <p id="card-definition" class="text-slate-900 font-semibold text-base">vt. 放弃，遗弃；n. 放任</p>
-                        </div>
-
-                        <div id="explanation-box" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1">
-                            <span class="font-bold text-slate-800"><i class="fa-solid fa-graduation-cap mr-1"></i>学术解析 / 记忆链:</span>
-                            <p id="card-explanation" class="leading-relaxed">常指因困难或压力彻底放弃原本拥有的事物。</p>
-                        </div>
-
-                        <div>
-                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">字典权威例句</span>
-                            <p id="card-example" class="text-slate-800 italic font-serif text-sm">"Never abandon hope, no matter how tough things get."</p>
-                            <p id="card-example-trans" class="text-slate-500 text-xs mt-0.5">“无论情况多么艰难，都绝不要放弃希望。”</p>
-                        </div>
-                    </div>
-
-                    <!-- 操作交互按键 -->
-                    <div class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-                        <button onclick="handleStudyWord(false)" class="py-3 px-4 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-rotate-left text-amber-600"></i>
-                            <span>不认识 (记入错题)</span>
-                        </button>
-                        <button onclick="handleStudyWord(true)" class="py-3 px-4 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 flex items-center justify-center space-x-2 shadow-sm">
-                            <i class="fa-solid fa-check text-emerald-400"></i>
-                            <span>已掌握 (斩词)</span>
-                        </button>
-                    </div>
-                </div>
+                <div id="review-options" class="grid grid-cols-1 gap-3"></div>
             </div>
         </section>
 
 
-        <!-- ================= TAB 2: 温习模块 (多维度复盘与错题统计) ================= -->
-        <section id="view-review" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl academic-card border border-slate-200">
-                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                    <div>
-                        <h3 class="serif-title text-lg font-bold text-slate-900">温习与多模式测试</h3>
-                        <p class="text-xs text-slate-400">基于数据统计学的错题强化训练</p>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button onclick="startReviewMode('en-to-cn')" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-medium text-xs hover:bg-slate-200">看英文选中文</button>
-                        <button onclick="startReviewMode('cn-to-en')" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-medium text-xs hover:bg-slate-200">看中文选英文</button>
-                        <button onclick="startReviewMode('audio-to-word')" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 font-medium text-xs hover:bg-slate-200"><i class="fa-solid fa-volume-high mr-1"></i>听音选词</button>
-                    </div>
-                </div>
-
-                <!-- 复习测试测试面板 -->
-                <div id="review-game-card" class="mt-6 max-w-xl mx-auto space-y-6 hidden">
-                    <div class="text-center space-y-2">
-                        <div id="review-prompt" class="text-2xl font-bold font-serif text-slate-900">Prompt</div>
-                        <button id="review-audio-btn" onclick="playReviewAudio()" class="hidden mx-auto p-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800">
-                            <i class="fa-solid fa-volume-high text-xl"></i>
-                        </button>
-                    </div>
-
-                    <div id="review-options" class="grid grid-cols-1 gap-3">
-                        <!-- 选项动态插入 -->
-                    </div>
-
-                    <div id="review-feedback" class="text-center text-sm font-bold min-h-[24px]"></div>
-                </div>
-
-                <div id="empty-review-state" class="py-12 text-center text-slate-400 text-sm">
-                    点击上方模式按钮开始复习温习。
-                </div>
-            </div>
-        </section>
-
-
-        <!-- ================= TAB 3: 词书与 Excel 云端管理模块 ================= -->
-        <section id="view-manage" class="hidden space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 1. 创建 / 修改词书 -->
-                <div class="bg-white p-6 rounded-2xl academic-card border border-slate-200 space-y-4">
-                    <h3 class="serif-title text-base font-bold text-slate-900 border-b border-slate-100 pb-3"><i class="fa-solid fa-book-medical mr-2"></i>新建 / 管理词书</h3>
-                    <div class="space-y-3 text-sm">
-                        <input id="manage-book-id" type="hidden">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">词书名称 *</label>
-                            <input id="manage-book-name" type="text" placeholder="例如: CET-4 核心高频词汇" class="w-full border border-slate-300 rounded-lg p-2.5">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">难度等级 / 分类 *</label>
-                            <select id="manage-book-level" class="w-full border border-slate-300 rounded-lg p-2.5">
-                                <option value="CET-4">CET-4 (四级)</option>
-                                <option value="CET-6">CET-6 (六级)</option>
-                                <option value="Postgraduate">考研英语</option>
-                                <option value="IELTS/TOEFL">雅思/托福</option>
-                                <option value="Academic">专业学术</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">词书描述</label>
-                            <textarea id="manage-book-desc" rows="2" placeholder="补充词书说明..." class="w-full border border-slate-300 rounded-lg p-2.5"></textarea>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button onclick="saveWordbook()" class="flex-1 bg-slate-900 text-white py-2.5 rounded-lg font-medium hover:bg-slate-800">保存词书</button>
-                            <button onclick="resetBookForm()" class="px-4 bg-slate-100 text-slate-600 rounded-lg">重置</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Excel 导入与范本下载 -->
-                <div class="bg-white p-6 rounded-2xl academic-card border border-slate-200 space-y-4 flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <h3 class="serif-title text-base font-bold text-slate-900"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i>Excel 解析转云端词书</h3>
-                            <button onclick="downloadExcelTemplate()" class="text-xs text-emerald-700 underline font-medium"><i class="fa-solid fa-download mr-1"></i>下载标准范本</button>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-                            选择绑定已有词书或留空按文件名新建。请确保表头第一行为英文标准格式：<code>word</code>*, <code>us_phonetic</code>, <code>uk_phonetic</code>, <code>definition</code>*, <code>explanation</code>, <code>example</code>, <code>example_translation</code>。
-                        </p>
-                        <div class="mt-4 space-y-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1">选择绑定目标词书 (可选)</label>
-                                <select id="import-target-book" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
-                                    <option value="">-- 自动根据 Excel 文件名新建 --</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-500 mb-1">上传 Excel 字典文件 (.xlsx)</label>
-                                <input id="excel-file-input" type="file" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700">
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="processExcelImport()" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-600 shadow-sm mt-4">
-                        <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>解析并上传至 Supabase 云端
-                    </button>
-                </div>
-            </div>
-
-            <!-- 现有词书云端列表 -->
+        <!-- MISTAKES VIEW: 错题本复盘与数据统计 -->
+        <section id="view-mistakes" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-2xl academic-card border border-slate-200 space-y-4">
-                <h3 class="serif-title text-base font-bold text-slate-900 border-b border-slate-100 pb-3">云端现有词书 (<span id="manage-book-count">0</span>)</h3>
-                <div class="overflow-x-auto">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="serif-title font-bold text-slate-800">错题复盘与数据统计</h3>
+                    <button onclick="showPosterModal()" class="bg-emerald-700 text-white text-xs px-3 py-2 rounded-lg hover:bg-emerald-600 font-medium"><i class="fa-solid fa-share-nodes mr-1.5"></i>生成打卡海报</button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                        <div class="text-xs text-slate-400">累计坚持天数</div>
+                        <div id="stat-days" class="text-2xl font-bold text-slate-800 font-mono">0</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                        <div class="text-xs text-slate-400">今日打卡单词</div>
+                        <div id="stat-today" class="text-2xl font-bold text-slate-800 font-mono">0</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-xl border">
+                        <div class="text-xs text-slate-400">错题总数</div>
+                        <div id="stat-mistakes-count" class="text-2xl font-bold text-amber-600 font-mono">0</div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto pt-4">
                     <table class="w-full text-left text-sm text-slate-600">
-                        <thead class="bg-slate-50 text-slate-700 text-xs font-semibold uppercase border-b border-slate-200">
+                        <thead class="bg-slate-50 text-xs font-semibold text-slate-700 uppercase border-b">
                             <tr>
-                                <th class="p-3">词书名称</th>
-                                <th class="p-3">难度等级</th>
-                                <th class="p-3">简介</th>
+                                <th class="p-3">单词</th>
+                                <th class="p-3">词性词义</th>
+                                <th class="p-3">错误频次</th>
                                 <th class="p-3 text-center">操作</th>
                             </tr>
                         </thead>
-                        <tbody id="manage-book-tbody" class="divide-y divide-slate-100">
-                            <tr><td colspan="4" class="p-4 text-center text-slate-400">加载中...</td></tr>
-                        </tbody>
+                        <tbody id="mistakes-table-body" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
 
-        <!-- ================= TAB 4: 沪江/百词斩风格打卡海报生成 ================= -->
-        <section id="view-poster" class="hidden space-y-6">
-            <div class="max-w-md mx-auto space-y-4">
-                <!-- 海报卡片（支持 HTML2Canvas 截图） -->
-                <div id="poster-card" class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden border border-slate-700 space-y-6">
-                    <div class="flex justify-between items-center border-b border-slate-700/80 pb-4">
-                        <div>
-                            <h2 class="serif-title font-bold text-xl tracking-wider">仁爱通 · 每日打卡</h2>
-                            <p class="text-[10px] text-slate-400 font-mono">ACADEMIC LEXICON CHECK-IN</p>
-                        </div>
-                        <span class="text-xs px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-full font-mono border border-amber-500/30">四六级助力</span>
+        <!-- MANAGE VIEW: 词书与 Excel 导入导出 -->
+        <section id="view-manage" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 创建/修改 -->
+                <div class="bg-white p-6 rounded-xl academic-card space-y-3 border">
+                    <h3 class="serif-title font-bold text-slate-900 border-b pb-2">新建 / 修改词书</h3>
+                    <input id="edit-book-id" type="hidden">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">词书名称 *</label>
+                        <input id="input-book-name" type="text" placeholder="例: 仁爱版四级核心词" class="w-full border rounded-lg p-2 text-sm">
                     </div>
-
-                    <div class="space-y-4 my-4">
-                        <div class="grid grid-cols-2 gap-4 text-center">
-                            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
-                                <div class="text-2xl font-bold font-mono text-emerald-400" id="poster-today-count">0</div>
-                                <div class="text-[11px] text-slate-400 mt-1">今日打卡单词</div>
-                            </div>
-                            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
-                                <div class="text-2xl font-bold font-mono text-amber-400" id="poster-total-count">0</div>
-                                <div class="text-[11px] text-slate-400 mt-1">累计记忆单词</div>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60 text-center space-y-1">
-                            <div class="text-xs text-slate-300">我已在仁爱通坚持打卡 <span id="poster-days-count" class="font-bold text-amber-400 font-mono text-base">1</span> 天</div>
-                            <div class="text-[11px] text-slate-400">超越了全国 <span id="poster-percentile" class="font-bold text-emerald-400 font-mono">88.5%</span> 的学友！</div>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">等级分类 *</label>
+                        <select id="input-book-level" class="w-full border rounded-lg p-2 text-sm">
+                            <option value="CET-4">CET-4 (四级)</option>
+                            <option value="CET-6">CET-6 (六级)</option>
+                            <option value="Postgraduate">考研英语</option>
+                            <option value="Academic">学术专升本/核心</option>
+                        </select>
                     </div>
-
-                    <!-- 二维码与跳转提示 (支持您指定的 GitHub 域名) -->
-                    <div class="pt-2 border-t border-slate-700/80 flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-200">长按保存海报 / 扫码加入</p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">扫码加入“仁爱通”，一起助力四六级</p>
-                            <p class="text-[9px] text-slate-500 font-mono mt-1">https://untholionleen.github.io/ratong/</p>
-                        </div>
-                        <div id="qrcode-container" class="bg-white p-1.5 rounded-lg"></div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">简介描述</label>
+                        <textarea id="input-book-desc" rows="2" class="w-full border rounded-lg p-2 text-sm"></textarea>
                     </div>
+                    <button onclick="saveWordBook()" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800">保存词书元数据</button>
                 </div>
 
-                <button onclick="downloadPosterImage()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-medium shadow-md hover:bg-slate-800 flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-download"></i>
-                    <span>保存打卡海报图片</span>
-                </button>
+                <!-- Excel 上传与范本下载 -->
+                <div class="bg-white p-6 rounded-xl academic-card space-y-3 border flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="serif-title font-bold text-slate-900">Excel 转词书</h3>
+                            <button onclick="downloadExcelTemplate()" class="text-xs text-emerald-700 underline"><i class="fa-solid fa-download mr-1"></i>下载标准范本</button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2">支持表头包含：word*, us_phonetic, uk_phonetic, pos, definition*, explanation, example, example_translation。</p>
+                        <div class="mt-3 space-y-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">绑定目标词书 (可选)</label>
+                                <select id="import-target-book" class="w-full border rounded-lg p-2 text-sm"><option value="">-- 自动以 Excel 档名新建词书 --</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">上传 Excel 范本文件</label>
+                                <input id="excel-file-input" type="file" accept=".xlsx, .xls" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-slate-100">
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="processExcelImport()" class="w-full bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 mt-4"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>解析并同步至 Supabase</button>
+                </div>
+            </div>
+
+            <!-- 云端词书列表 -->
+            <div class="bg-white rounded-xl academic-card p-6 space-y-3 border">
+                <h3 class="serif-title font-bold text-slate-900 border-b pb-2">云端词书库</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50 text-xs font-semibold text-slate-700 uppercase border-b">
+                            <tr>
+                                <th class="p-2.5">词书名称</th>
+                                <th class="p-2.5">等级</th>
+                                <th class="p-2.5">简介</th>
+                                <th class="p-2.5 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="book-table-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Footer 客服与版权 -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 space-y-1">
-        <p>仁爱通 Academic Lexicon &copy; 2026 Open Source. Cloud Backend powered by Supabase.</p>
-        <p>如需技术支持或反馈问题，请联系客服邮箱：<a href="mailto:xyhh99@qq.com" class="text-slate-800 font-semibold underline">xyhh99@qq.com</a></p>
-    </footer>
-
-    <!-- Auth 弹窗模态框 (6位数字验证码注册与双重密码校验) -->
-    <div id="auth-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-2xl max-w-sm w-full mx-4 academic-card space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 id="auth-modal-title" class="font-bold text-slate-900">用户注册 / 登录</h3>
-                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+    <!-- 打卡海报 Modal -->
+    <div id="poster-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white max-w-sm w-full rounded-2xl p-6 text-center space-y-4 relative border shadow-2xl">
+            <button onclick="closePosterModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            
+            <div class="space-y-1">
+                <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">RENTONG CHECK-IN</span>
+                <h3 class="serif-title text-xl font-bold text-slate-900">仁爱通 · 每日打卡</h3>
             </div>
 
-            <div class="space-y-3 text-sm">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">电子邮箱 *</label>
-                    <input id="auth-email" type="email" placeholder="yourname@domain.com" class="w-full border border-slate-300 rounded-lg p-2.5">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                <div class="grid grid-cols-2 gap-2 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-400">今日打卡单词</div>
+                        <div id="poster-today-count" class="text-xl font-bold text-slate-800 font-mono">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400">已坚持打卡</div>
+                        <div id="poster-total-days" class="text-xl font-bold text-slate-800 font-mono">0 天</div>
+                    </div>
                 </div>
+                <div class="text-xs text-slate-600 font-medium">
+                    对比使用人数，你已超越 <span id="poster-percent" class="text-emerald-700 font-bold">92%</span> 的同学！
+                </div>
+            </div>
 
-                <div id="pwd-box-1">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">设置密码 *</label>
-                    <input id="auth-password" type="password" placeholder="密码" class="w-full border border-slate-300 rounded-lg p-2.5">
-                </div>
-
-                <div id="pwd-box-2">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">确认密码 (注册校验) *</label>
-                    <input id="auth-password-confirm" type="password" placeholder="再次输入密码" class="w-full border border-slate-300 rounded-lg p-2.5">
-                </div>
-
-                <div id="otp-box" class="hidden">
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">邮箱 6 位数字验证码 *</label>
-                    <input id="auth-otp" type="text" maxlength="6" placeholder="例如: 123456" class="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-center tracking-widest text-lg">
-                </div>
-
-                <button id="auth-submit-btn" onclick="handleAuthSubmit()" class="w-full bg-slate-900 text-white py-2.5 rounded-lg font-medium hover:bg-slate-800">发送验证码并注册</button>
-                
-                <div class="text-center text-xs text-slate-500">
-                    <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="underline hover:text-slate-900">已有账号？切换为登录</button>
-                </div>
+            <!-- 二维码与提示 -->
+            <div class="flex flex-col items-center space-y-2 pt-2">
+                <div id="qrcode" class="p-2 bg-white border rounded-lg"></div>
+                <p class="text-xs font-semibold text-slate-700">扫码加入“仁爱通”，一起助力四六级</p>
+                <p class="text-[10px] text-slate-400">如需客服帮助请反馈至邮箱: xyhh99@qq.com</p>
             </div>
         </div>
     </div>
 
-    <!-- JS 逻辑 -->
+    <!-- 页脚客服信息 -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 space-y-1">
+        <p>仁爱通 (Renaitong) Academic Lexicon &copy; 2026 Open Source Project.</p>
+        <p>如需支持或问题反馈，请联系客服邮箱: <a href="mailto:xyhh99@qq.com" class="text-slate-600 underline">xyhh99@qq.com</a></p>
+    </footer>
+
+
+    <!-- JavaScript 代码 -->
     <script>
-        // 初始化 Supabase
+        // Supabase Credentials
         const SUPABASE_URL = "https://zqrhfcsrexoamizkzzhq.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcmhmY3NyZXhvYW1pemt6emhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY3MDUsImV4cCI6MjEwNjAwMjcwNX0.Hw3mBAy3mJvPa7SeVOdfArq-fc8G6sff77SfWqWeZ_M";
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // State 数据状态
-        let currentUser = null;
+        // Current User State
+        let currentUser = JSON.parse(localStorage.getItem('rentong_user') || 'null');
         let wordbooks = [];
         let currentWords = [];
         let currentWordIndex = 0;
-        let isRegisterMode = true;
-        let isOtpSent = false;
-        let isMasked = false;
-        let userIp = "127.0.0.1";
+        let targetDailyCount = 10;
+        let generatedCode = null;
 
-        // 复习游戏状态
-        let reviewQueue = [];
-        let currentReviewItem = null;
-
+        // Init App
         window.addEventListener('DOMContentLoaded', async () => {
-            await fetchUserIp();
-            await checkUserSession();
-            await fetchWordbooks();
-            initQrCode();
+            if (currentUser) {
+                showMainApp();
+                await fetchWordbooks();
+            } else {
+                showAuthView();
+            }
         });
 
-        // 获取用户 IP
-        async function fetchUserIp() {
-            try {
-                const res = await fetch('https://api.ipify.org?format=json');
-                const data = await res.json();
-                userIp = data.ip || "127.0.0.1";
-            } catch(e) { console.log("IP获取备用:", e); }
+        // AUTH System
+        function showAuthView() {
+            document.getElementById('view-auth').classList.remove('hidden');
+            document.getElementById('main-nav').classList.add('hidden');
+            document.getElementById('view-study').classList.add('hidden');
+            document.getElementById('view-review').classList.add('hidden');
+            document.getElementById('view-mistakes').classList.add('hidden');
+            document.getElementById('view-manage').classList.add('hidden');
         }
 
-        // Session 状态检查
-        async function checkUserSession() {
-            const { data: { session } } = await db.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                document.getElementById('auth-btn').innerText = currentUser.email.split('@')[0] + " (已登录)";
-            }
+        function showMainApp() {
+            document.getElementById('view-auth').classList.add('hidden');
+            document.getElementById('main-nav').classList.remove('hidden');
+            switchTab('study');
         }
 
-        // Tab 视图切换
-        function switchTab(tab) {
-            ['study', 'review', 'manage', 'poster'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100";
-            });
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "px-3 py-1.5 rounded-lg bg-slate-900 text-white font-semibold";
-
-            if (tab === 'poster') updatePosterData();
-        }
-
-        /* ---------------- Auth 认证体系 (6位验证码 + 双重密码) ---------------- */
-        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
-        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
-
-        function toggleAuthMode() {
-            isRegisterMode = !isRegisterMode;
-            isOtpSent = false;
-            document.getElementById('auth-modal-title').innerText = isRegisterMode ? "用户注册" : "用户登录";
-            document.getElementById('pwd-box-2').style.display = isRegisterMode ? "block" : "none";
-            document.getElementById('otp-box').classList.add('hidden');
-            document.getElementById('auth-submit-btn').innerText = isRegisterMode ? "发送验证码并注册" : "直接登录";
-            document.getElementById('auth-toggle-btn').innerText = isRegisterMode ? "已有账号？切换为登录" : "没有账号？切换为注册";
-        }
-
-        async function handleAuthSubmit() {
-            const email = document.getElementById('auth-email').value.trim();
-            const password = document.getElementById('auth-password').value;
-
-            if (!email || !password) return alert("请填写完整邮箱与密码！");
-
-            if (isRegisterMode) {
-                const confirmPwd = document.getElementById('auth-password-confirm').value;
-                if (password !== confirmPwd) return alert("两次输入的密码不一致！");
-
-                if (!isOtpSent) {
-                    // 发送 OTP 6位验证码
-                    const { error } = await db.auth.signUp({ email, password });
-                    if (error) return alert("注册请求失败: " + error.message);
-                    alert("6位数字验证码已发送至您的邮箱，请查收并填入下方验证！");
-                    isOtpSent = true;
-                    document.getElementById('otp-box').classList.remove('hidden');
-                    document.getElementById('auth-submit-btn').innerText = "验证 6 位验证码";
-                } else {
-                    const token = document.getElementById('auth-otp').value.trim();
-                    if (!token || token.length !== 6) return alert("请输入完整的 6 位数字验证码！");
-                    const { data, error } = await db.auth.verifyOtp({ email, token, type: 'signup' });
-                    if (error) return alert("验证码校验失败: " + error.message);
-                    alert("注册并验证成功！");
-                    currentUser = data.user;
-                    location.reload();
-                }
+        function switchAuthMode(mode) {
+            if (mode === 'login') {
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('form-register').classList.add('hidden');
+                document.getElementById('auth-tab-login').className = "flex-1 py-2 text-center text-slate-900 border-b-2 border-slate-900 font-semibold";
+                document.getElementById('auth-tab-register').className = "flex-1 py-2 text-center text-slate-400";
             } else {
-                // 登录模式 (免验证码)
-                const { data, error } = await db.auth.signInWithPassword({ email, password });
-                if (error) return alert("登录失败: " + error.message);
-                alert("登录成功！");
-                currentUser = data.user;
-                location.reload();
+                document.getElementById('form-login').classList.add('hidden');
+                document.getElementById('form-register').classList.remove('hidden');
+                document.getElementById('auth-tab-register').className = "flex-1 py-2 text-center text-slate-900 border-b-2 border-slate-900 font-semibold";
+                document.getElementById('auth-tab-login').className = "flex-1 py-2 text-center text-slate-400";
             }
         }
 
-        /* ---------------- 词书与 Excel 解析管理 ---------------- */
-        async function fetchWordbooks() {
-            const { data, error } = await db.from('wordbooks').select('*').order('created_at', { ascending: false });
-            if (error) return console.error(error);
-            wordbooks = data || [];
+        async function sendVerificationCode() {
+            const username = document.getElementById('reg-username').value.trim();
+            if (!username) return alert("请先填写用户名/邮箱！");
 
-            const options = wordbooks.map(b => `<option value="${b.id}">${b.name} (${b.level})</option>`).join('');
-            document.getElementById('study-book-select').innerHTML = options || `<option value="">(暂无词书，请先创建)</option>`;
-            document.getElementById('import-target-book').innerHTML = `<option value="">-- 自动根据 Excel 文件名新建 --</option>` + options;
-            
-            document.getElementById('manage-book-count').innerText = wordbooks.length;
-            document.getElementById('manage-book-tbody').innerHTML = wordbooks.map(b => `
-                <tr>
-                    <td class="p-3 font-semibold text-slate-800">${b.name}</td>
-                    <td class="p-3"><span class="text-xs px-2 py-0.5 rounded bg-slate-100 border">${b.level}</span></td>
-                    <td class="p-3 text-xs text-slate-500">${b.description || '-'}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteWordbook('${b.id}')" class="text-xs text-red-600 hover:underline">删除</button>
-                    </td>
-                </tr>
-            `).join('');
+            generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+            const { error } = await db.from('user_verification_codes').insert([{
+                username, code: generatedCode, expires_at: expiresAt
+            }]);
+
+            if (error) return alert("验证码生成失败: " + error.message);
+
+            alert(`【仁爱通验证码】您的注册验证码为：${generatedCode}，10分钟内有效。`);
+            document.getElementById('btn-send-code').innerText = "已发送";
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('reg-username').value.trim();
+            const p1 = document.getElementById('reg-pass1').value;
+            const p2 = document.getElementById('reg-pass2').value;
+            const code = document.getElementById('reg-code').value.trim();
+
+            if (!username) return alert("请输入用户名");
+            if (!p1 || p1 !== p2) return alert("两次输入的密码不一致！");
+            if (!code || code.length !== 6) return alert("请输入6位验证码");
+
+            // 验证验证码
+            const { data: codeData, error: codeErr } = await db.from('user_verification_codes')
+                .select('*').eq('username', username).eq('code', code).eq('used', false)
+                .gte('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1);
+
+            if (codeErr || !codeData || codeData.length === 0) {
+                return alert("验证码无效或已过期！");
+            }
+
+            // 标注验证码已用
+            await db.from('user_verification_codes').update({ used: true }).eq('id', codeData[0].id);
+
+            // 写入用户表
+            const { data: newUser, error: regErr } = await db.from('app_users').insert([{
+                username, password_hash: p1
+            }]).select().single();
+
+            if (regErr) return alert("注册失败: " + regErr.message);
+
+            alert("注册成功！已为您自动登录。");
+            currentUser = newUser;
+            localStorage.setItem('rentong_user', JSON.stringify(currentUser));
+            showMainApp();
+            await fetchWordbooks();
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!username || !password) return alert("请填写用户名和密码");
+
+            const { data, error } = await db.from('app_users').select('*').eq('username', username).eq('password_hash', password).single();
+
+            if (error || !data) return alert("用户名或密码错误！");
+
+            currentUser = data;
+            localStorage.setItem('rentong_user', JSON.stringify(currentUser));
+            showMainApp();
+            await fetchWordbooks();
+        }
+
+        function logout() {
+            localStorage.removeItem('rentong_user');
+            currentUser = null;
+            showAuthView();
+        }
+
+        // Tab Router
+        function switchTab(tab) {
+            document.getElementById('view-study').classList.add('hidden');
+            document.getElementById('view-review').classList.add('hidden');
+            document.getElementById('view-mistakes').classList.add('hidden');
+            document.getElementById('view-manage').classList.add('hidden');
+
+            document.getElementById('tab-study').className = "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50";
+            document.getElementById('tab-review').className = "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50";
+            document.getElementById('tab-mistakes').className = "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50";
+            document.getElementById('tab-manage').className = "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50";
+
+            if (tab === 'study') {
+                document.getElementById('view-study').classList.remove('hidden');
+                document.getElementById('tab-study').className = "px-3 py-1.5 rounded-lg text-slate-900 bg-slate-100 font-semibold";
+            } else if (tab === 'review') {
+                document.getElementById('view-review').classList.remove('hidden');
+                document.getElementById('tab-review').className = "px-3 py-1.5 rounded-lg text-slate-900 bg-slate-100 font-semibold";
+                initReviewSession();
+            } else if (tab === 'mistakes') {
+                document.getElementById('view-mistakes').classList.remove('hidden');
+                document.getElementById('tab-mistakes').className = "px-3 py-1.5 rounded-lg text-slate-900 bg-slate-100 font-semibold";
+                loadMistakesAndStats();
+            } else {
+                document.getElementById('view-manage').classList.remove('hidden');
+                document.getElementById('tab-manage').className = "px-3 py-1.5 rounded-lg text-slate-900 bg-slate-100 font-semibold";
+            }
+        }
+
+        // Wordbooks API
+        async function fetchWordbooks() {
+            const { data } = await db.from('wordbooks').select('*').order('created_at', { ascending: false });
+            wordbooks = data || [];
+            renderWordbookDropdowns();
+            renderWordbookTable();
+        }
+
+        function renderWordbookDropdowns() {
+            const studySelect = document.getElementById('study-book-select');
+            const importSelect = document.getElementById('import-target-book');
+
+            if (wordbooks.length === 0) {
+                studySelect.innerHTML = `<option value="">(暂无词书，请先创建)</option>`;
+                importSelect.innerHTML = `<option value="">-- 自动根据 Excel 档名新建词书 --</option>`;
+                return;
+            }
+
+            studySelect.innerHTML = wordbooks.map(b => `<option value="${b.id}">${b.name} (${b.level})</option>`).join('');
+            importSelect.innerHTML = `<option value="">-- 自动根据 Excel 档名新建词书 --</option>` + 
+                wordbooks.map(b => `<option value="${b.id}">${b.name} (${b.level})</option>`).join('');
 
             onStudyBookChange();
         }
 
-        async function saveWordbook() {
-            const name = document.getElementById('manage-book-name').value.trim();
-            const level = document.getElementById('manage-book-level').value;
-            const description = document.getElementById('manage-book-desc').value.trim();
-            if (!name) return alert("请输入词书名称");
-
-            const { error } = await db.from('wordbooks').insert([{ name, level, description }]);
-            if (error) return alert("保存失败: " + error.message);
-            alert("词书创建成功！");
-            resetBookForm();
-            await fetchWordbooks();
-        }
-
-        function resetBookForm() {
-            document.getElementById('manage-book-name').value = '';
-            document.getElementById('manage-book-desc').value = '';
-        }
-
-        async function deleteWordbook(id) {
-            if (!confirm("确定删除该词书及其所有单词？")) return;
-            await db.from('wordbooks').delete().eq('id', id);
-            await fetchWordbooks();
-        }
-
-        // 下载标准 Excel 模板
-        function downloadExcelTemplate() {
-            const template = [{
-                "word": "abandon",
-                "us_phonetic": "/əˈbændən/",
-                "uk_phonetic": "/əˈbændən/",
-                "definition": "vt. 放弃，遗弃；n. 放任",
-                "explanation": "常指因困难彻底放弃原本拥有的事物",
-                "example": "He decided to abandon the experiment.",
-                "example_translation": "他决定放弃这个实验。"
-            }];
-            const ws = XLSX.utils.json_to_sheet(template);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "StandardTemplate");
-            XLSX.writeFile(wb, "Academic_Lexicon_Template.xlsx");
-        }
-
-        // Excel 转云端词书解析
-        async function processExcelImport() {
-            let targetId = document.getElementById('import-target-book').value;
-            const fileInput = document.getElementById('excel-file-input');
-            if (!fileInput.files.length) return alert("请先上传 Excel 文件！");
-
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-                if (!targetId) {
-                    const { data: newBook, error } = await db.from('wordbooks').insert([{
-                        name: file.name.replace(/\.[^/.]+$/, ""),
-                        level: 'CET-4',
-                        description: 'Excel 自动导入'
-                    }]).select().single();
-                    if (error) return alert("创建词书失败");
-                    targetId = newBook.id;
-                }
-
-                const wordsToInsert = jsonData.map(row => ({
-                    book_id: targetId,
-                    word: String(row['word'] || row['单词'] || '').trim(),
-                    us_phonetic: String(row['us_phonetic'] || row['美式音标'] || '').trim(),
-                    uk_phonetic: String(row['uk_phonetic'] || row['英式音标'] || '').trim(),
-                    definition: String(row['definition'] || row['词性词义'] || '').trim(),
-                    explanation: String(row['explanation'] || row['详细解释'] || '').trim(),
-                    example: String(row['example'] || row['例句'] || '').trim(),
-                    example_translation: String(row['example_translation'] || row['例句翻译'] || '').trim()
-                })).filter(w => w.word && w.definition);
-
-                const { error: insertErr } = await db.from('words').insert(wordsToInsert);
-                if (insertErr) return alert("上传错误: " + insertErr.message);
-                alert(`成功导入 ${wordsToInsert.length} 个单词到云端！`);
-                fileInput.value = '';
-                await fetchWordbooks();
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        /* ---------------- 单词打卡与推演算术 ---------------- */
         async function onStudyBookChange() {
             const bookId = document.getElementById('study-book-select').value;
-            if (!bookId) {
-                document.getElementById('word-card').classList.add('hidden');
-                document.getElementById('empty-study-state').classList.remove('hidden');
-                return;
-            }
+            if (!bookId) return;
 
             const { data } = await db.from('words').select('*').eq('book_id', bookId);
             currentWords = data || [];
@@ -608,174 +554,325 @@
                 document.getElementById('word-card').classList.remove('hidden');
                 renderCurrentWord();
             }
-            updateGoalCalculation();
+            calculateEstimatedDays();
+        }
+
+        function onTargetCountChange() {
+            const val = document.getElementById('study-target-count').value;
+            if (val === 'custom') {
+                const count = prompt("请输入您单次/每日背诵的单词数量:", "20");
+                targetDailyCount = parseInt(count) || 10;
+            } else {
+                targetDailyCount = parseInt(val);
+            }
+            calculateEstimatedDays();
+        }
+
+        function calculateEstimatedDays() {
+            const total = currentWords.length;
+            const days = Math.ceil(total / targetDailyCount);
+            document.getElementById('estimated-days').innerText = days || '--';
         }
 
         function renderCurrentWord() {
             if (currentWordIndex >= currentWords.length) {
-                alert("🎉 恭喜！您已完成本书所有单词的卡片打卡！");
+                alert("🎉 恭喜！您已完成本次绑定的单词打卡任务！");
+                recordDailyCheckin(currentWords.length);
                 currentWordIndex = 0;
             }
+
             const word = currentWords[currentWordIndex];
+            if (!word) return;
+
             document.getElementById('card-word').innerText = word.word;
-            document.getElementById('card-us-phone').innerText = word.us_phonetic ? `[ ${word.us_phonetic} ]` : '[ - ]';
-            document.getElementById('card-uk-phone').innerText = word.uk_phonetic ? `[ ${word.uk_phonetic} ]` : '[ - ]';
-            document.getElementById('card-definition').innerText = word.definition;
-            document.getElementById('card-explanation').innerText = word.explanation || '暂无解析';
-            document.getElementById('card-example').innerText = word.example ? `"${word.example}"` : '暂无例句';
+            document.getElementById('card-us-phone').innerText = `[ ${word.us_phonetic || '-'} ]`;
+            document.getElementById('card-uk-phone').innerText = `[ ${word.uk_phonetic || '-'} ]`;
+            document.getElementById('card-definition').innerText = `${word.pos || ''} ${word.definition}`;
+            document.getElementById('card-explanation').innerText = word.explanation || '暂无详细解释';
+            document.getElementById('card-example').innerText = word.example ? `"${word.example}"` : '';
             document.getElementById('card-example-trans').innerText = word.example_translation || '';
+
+            document.getElementById('study-progress-count').innerText = currentWordIndex + 1;
+            document.getElementById('study-total-count').innerText = currentWords.length;
         }
 
-        // 打卡/斩词操作
-        async function handleStudyWord(known) {
+        async function handleWordAction(known) {
             const word = currentWords[currentWordIndex];
-            if (currentUser) {
-                await db.from('user_study_logs').insert([{
+            if (!known) {
+                // 标记为错题/需复习
+                await db.from('user_study_logs').upsert({
                     user_id: currentUser.id,
-                    device_ip: userIp,
                     word_id: word.id,
-                    book_id: word.book_id,
-                    status: known ? 'learned' : 'reviewing',
-                    error_count: known ? 0 : 1
-                }]);
+                    status: 'reviewing',
+                    wrong_count: 1
+                }, { onConflict: 'user_id,word_id' });
+            } else {
+                await db.from('user_study_logs').upsert({
+                    user_id: currentUser.id,
+                    word_id: word.id,
+                    status: 'mastered'
+                }, { onConflict: 'user_id,word_id' });
             }
-
-            let todayLearned = parseInt(document.getElementById('today-learned-count').innerText) + 1;
-            document.getElementById('today-learned-count').innerText = todayLearned;
 
             currentWordIndex++;
             renderCurrentWord();
         }
 
-        // 天数目标推演算法
-        function updateGoalCalculation() {
-            const selectVal = document.getElementById('daily-target-select').value;
-            const customInput = document.getElementById('custom-target-input');
-            let dailyGoal = 10;
+        async function recordDailyCheckin(count) {
+            const today = new Date().toISOString().split('T')[0];
+            await db.from('user_daily_checkins').upsert({
+                user_id: currentUser.id,
+                checkin_date: today,
+                words_count: count
+            }, { onConflict: 'user_id,checkin_date' });
+        }
 
-            if (selectVal === 'custom') {
-                customInput.classList.remove('hidden');
-                dailyGoal = parseInt(customInput.value) || 10;
+        function speakWord(accent) {
+            const text = document.getElementById('card-word').innerText;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = accent === 'us' ? 'en-US' : 'en-GB';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function toggleCardMask() {
+            const box = document.getElementById('card-details-box');
+            box.classList.toggle('blur-sm');
+        }
+
+        // Review Mode
+        let reviewWords = [];
+        let currentReviewWord = null;
+
+        function initReviewSession() {
+            if (currentWords.length < 4) {
+                document.getElementById('review-stem').innerText = "当前词书单词量不足4个，无法开启测试";
+                return;
+            }
+            reviewWords = [...currentWords].sort(() => 0.5 - Math.random());
+            nextReviewQuestion();
+        }
+
+        function nextReviewQuestion() {
+            const mode = document.getElementById('review-mode-select').value;
+            currentReviewWord = reviewWords[Math.floor(Math.random() * reviewWords.length)];
+
+            const stemBtn = document.getElementById('btn-review-audio');
+            stemBtn.classList.add('hidden');
+
+            if (mode === 'en2cn') {
+                document.getElementById('review-stem').innerText = currentReviewWord.word;
+            } else if (mode === 'cn2en') {
+                document.getElementById('review-stem').innerText = currentReviewWord.definition;
             } else {
-                customInput.classList.add('hidden');
-                dailyGoal = parseInt(selectVal);
-            }
-
-            document.getElementById('today-goal-count').innerText = dailyGoal;
-            const totalWords = currentWords.length;
-            const daysEstimate = Math.ceil(totalWords / dailyGoal);
-            document.getElementById('goal-days-estimate').innerText = `${daysEstimate} 天`;
-        }
-
-        // TTS 网易/有道高清发音
-        function speakWord(type) {
-            const wordText = document.getElementById('card-word').innerText;
-            if (!wordText) return;
-            const langCode = type === 'uk' ? '1' : '2';
-            const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(wordText)}&type=${langCode}`);
-            audio.play().catch(() => {
-                const utterance = new SpeechSynthesisUtterance(wordText);
-                utterance.lang = type === 'uk' ? 'en-GB' : 'en-US';
-                window.speechSynthesis.speak(utterance);
-            });
-        }
-
-        function toggleMask() {
-            isMasked = !isMasked;
-            document.getElementById('card-details-body').classList.toggle('blur-mask', isMasked);
-        }
-
-        /* ---------------- 温习复盘三合一游戏 ---------------- */
-        function startReviewMode(mode) {
-            if (currentWords.length < 4) return alert("当前词书至少需要 4 个单词才能开启测试！");
-            document.getElementById('empty-review-state').classList.add('hidden');
-            document.getElementById('review-game-card').classList.remove('hidden');
-
-            // 随机抽一个单词作为题目
-            const target = currentWords[Math.floor(Math.random() * currentWords.length)];
-            currentReviewItem = target;
-
-            // 抽取3个混淆项
-            let choices = [target];
-            while (choices.length < 4) {
-                let randomItem = currentWords[Math.floor(Math.random() * currentWords.length)];
-                if (!choices.includes(randomItem)) choices.push(randomItem);
-            }
-            choices.sort(() => Math.random() - 0.5);
-
-            const promptEl = document.getElementById('review-prompt');
-            const audioBtn = document.getElementById('review-audio-btn');
-            const optionsBox = document.getElementById('review-options');
-            document.getElementById('review-feedback').innerText = '';
-
-            if (mode === 'en-to-cn') {
-                promptEl.innerText = target.word;
-                audioBtn.classList.add('hidden');
-                optionsBox.innerHTML = choices.map(c => `
-                    <button onclick="checkReviewAnswer('${c.id === target.id}')" class="p-3 bg-slate-50 border rounded-xl text-left hover:bg-slate-100 text-sm font-medium">${c.definition}</button>
-                `).join('');
-            } else if (mode === 'cn-to-en') {
-                promptEl.innerText = target.definition;
-                audioBtn.classList.add('hidden');
-                optionsBox.innerHTML = choices.map(c => `
-                    <button onclick="checkReviewAnswer('${c.id === target.id}')" class="p-3 bg-slate-50 border rounded-xl text-left hover:bg-slate-100 text-sm font-medium">${c.word}</button>
-                `).join('');
-            } else if (mode === 'audio-to-word') {
-                promptEl.innerText = "🔊 点击播放听音选词";
-                audioBtn.classList.remove('hidden');
+                document.getElementById('review-stem').innerText = "[ 点击按钮播放发音 ]";
+                stemBtn.classList.remove('hidden');
                 playReviewAudio();
-                optionsBox.innerHTML = choices.map(c => `
-                    <button onclick="checkReviewAnswer('${c.id === target.id}')" class="p-3 bg-slate-50 border rounded-xl text-left hover:bg-slate-100 text-sm font-medium">${c.word} (${c.definition.slice(0,10)}...)</button>
-                `).join('');
             }
+
+            // 生成4个可选项
+            let options = [currentReviewWord];
+            while (options.length < 4) {
+                let rand = currentWords[Math.floor(Math.random() * currentWords.length)];
+                if (!options.find(o => o.id === rand.id)) options.push(rand);
+            }
+            options.sort(() => 0.5 - Math.random());
+
+            const container = document.getElementById('review-options');
+            container.innerHTML = options.map(opt => `
+                <button onclick="checkReviewAnswer('${opt.id}')" class="w-full text-left p-3.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-sm font-medium transition-colors">
+                    ${mode === 'cn2en' ? opt.word : opt.definition}
+                </button>
+            `).join('');
         }
 
         function playReviewAudio() {
-            if (currentReviewItem) {
-                const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(currentReviewItem.word)}&type=2`);
-                audio.play();
-            }
+            if (!currentReviewWord) return;
+            const msg = new SpeechSynthesisUtterance(currentReviewWord.word);
+            msg.lang = 'en-US';
+            window.speechSynthesis.speak(msg);
         }
 
-        function checkReviewAnswer(isCorrect) {
-            const feedback = document.getElementById('review-feedback');
-            if (isCorrect === 'true') {
-                feedback.className = "text-center text-sm font-bold text-emerald-600";
-                feedback.innerText = "✓ 回答正确！精准掌握！";
+        function checkReviewAnswer(selectedId) {
+            if (selectedId === currentReviewWord.id) {
+                alert("✅ 回答正确！");
             } else {
-                feedback.className = "text-center text-sm font-bold text-red-600";
-                feedback.innerText = "✕ 回答错误，已记入错题库强化！";
+                alert(`❌ 回答错误！正确答案是：${currentReviewWord.word} - ${currentReviewWord.definition}`);
             }
+            nextReviewQuestion();
         }
 
-        /* ---------------- 沪江/百词斩风格打卡海报 ---------------- */
-        function initQrCode() {
-            QRCode.toCanvas(document.createElement('canvas'), "https://untholionleen.github.io/ratong/", function (error, canvas) {
-                if (!error) {
-                    canvas.style.width = "64px";
-                    canvas.style.height = "64px";
-                    document.getElementById('qrcode-container').appendChild(canvas);
+        // Mistakes & Stats
+        async function loadMistakesAndStats() {
+            // 累计天数
+            const { data: daysData } = await db.from('user_daily_checkins').select('checkin_date').eq('user_id', currentUser.id);
+            document.getElementById('stat-days').innerText = daysData ? daysData.length : 0;
+
+            // 今日打卡
+            const today = new Date().toISOString().split('T')[0];
+            const { data: todayData } = await db.from('user_daily_checkins').select('words_count').eq('user_id', currentUser.id).eq('checkin_date', today);
+            document.getElementById('stat-today').innerText = (todayData && todayData[0]) ? todayData[0].words_count : 0;
+
+            // 错题表
+            const { data: mistakes } = await db.from('user_study_logs')
+                .select('word_id, wrong_count, words(word, definition)')
+                .eq('user_id', currentUser.id).eq('status', 'reviewing');
+
+            document.getElementById('stat-mistakes-count').innerText = mistakes ? mistakes.length : 0;
+
+            const tbody = document.getElementById('mistakes-table-body');
+            if (!mistakes || mistakes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">太棒了，暂无错题记录！</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = mistakes.map(m => `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 font-semibold text-slate-800">${m.words?.word || '-'}</td>
+                    <td class="p-3 text-slate-600">${m.words?.definition || '-'}</td>
+                    <td class="p-3 font-mono text-amber-600 font-bold">${m.wrong_count}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="removeMistake('${m.word_id}')" class="text-xs text-emerald-600 hover:underline">移除错题</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function removeMistake(wordId) {
+            await db.from('user_study_logs').update({ status: 'mastered' }).eq('user_id', currentUser.id).eq('word_id', wordId);
+            await loadMistakesAndStats();
+        }
+
+        // Poster Modal
+        function showPosterModal() {
+            document.getElementById('poster-modal').classList.remove('hidden');
+            document.getElementById('poster-today-count').innerText = document.getElementById('stat-today').innerText;
+            document.getElementById('poster-total-days').innerText = document.getElementById('stat-days').innerText + " 天";
+
+            // 生成 GitHub Pages 二维码
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: "https://untholionleen.github.io/ratong/",
+                width: 110,
+                height: 110
+            });
+        }
+
+        function closePosterModal() {
+            document.getElementById('poster-modal').classList.add('hidden');
+        }
+
+        // Excel Import / Download Template
+        function downloadExcelTemplate() {
+            const templateData = [
+                {
+                    "word": "abandon",
+                    "us_phonetic": "/əˈbændən/",
+                    "uk_phonetic": "/əˈbændən/",
+                    "pos": "vt.",
+                    "definition": "放弃，遗弃；n. 放任",
+                    "explanation": "[考点] abandon oneself to 沉溺于",
+                    "example": "He decided to abandon the experiment.",
+                    "example_translation": "他决定放弃这个实验。"
                 }
-            });
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(templateData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "词书标准模板");
+            XLSX.writeFile(workbook, "Renaitong_Wordbook_Template.xlsx");
         }
 
-        function updatePosterData() {
-            const todayCount = document.getElementById('today-learned-count').innerText;
-            document.getElementById('poster-today-count').innerText = todayCount;
-            document.getElementById('poster-total-count').innerText = parseInt(todayCount) + 120; // 真实与累计反馈
-            
-            // 计算打卡超越度算法
-            let randomPercent = (85 + Math.random() * 10).toFixed(1);
-            document.getElementById('poster-percentile').innerText = `${randomPercent}%`;
+        async function processExcelImport() {
+            let targetBookId = document.getElementById('import-target-book').value;
+            const fileInput = document.getElementById('excel-file-input');
+
+            if (!fileInput.files.length) return alert("请上传 Excel 文件！");
+
+            const file = fileInput.files[0];
+            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (!targetBookId) {
+                        const { data: newBook, error: createError } = await db.from('wordbooks').insert([{
+                            name: fileNameWithoutExt, level: 'CET-4', description: `通过 Excel [${file.name}] 导入`
+                        }]).select().single();
+
+                        if (createError) throw createError;
+                        targetBookId = newBook.id;
+                    }
+
+                    const wordsToInsert = jsonData.map(row => ({
+                        book_id: targetBookId,
+                        word: String(row['word'] || row['单词'] || '').trim(),
+                        us_phonetic: String(row['us_phonetic'] || row['美式音标'] || '').trim(),
+                        uk_phonetic: String(row['uk_phonetic'] || row['英式音标'] || '').trim(),
+                        pos: String(row['pos'] || row['词性'] || '').trim(),
+                        definition: String(row['definition'] || row['词性词义'] || '').trim(),
+                        explanation: String(row['explanation'] || row['详细解释'] || '').trim(),
+                        example: String(row['example'] || row['例句'] || '').trim(),
+                        example_translation: String(row['example_translation'] || row['例句翻译'] || '').trim()
+                    })).filter(w => w.word && w.definition);
+
+                    const { error: insertError } = await db.from('words').insert(wordsToInsert);
+                    if (insertError) throw insertError;
+
+                    alert(`解析成功！已同步 ${wordsToInsert.length} 个单词。`);
+                    fileInput.value = '';
+                    await fetchWordbooks();
+
+                } catch (err) {
+                    alert("导入失败: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
 
-        function downloadPosterImage() {
-            html2canvas(document.getElementById('poster-card')).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `仁爱通_四六级打卡海报.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-            });
+        async function saveWordBook() {
+            const editId = document.getElementById('edit-book-id').value;
+            const name = document.getElementById('input-book-name').value.trim();
+            const level = document.getElementById('input-book-level').value;
+            const description = document.getElementById('input-book-desc').value.trim();
+
+            if (!name) return alert("请输入词书名称");
+
+            if (editId) {
+                await db.from('wordbooks').update({ name, level, description }).eq('id', editId);
+            } else {
+                await db.from('wordbooks').insert([{ name, level, description }]);
+            }
+
+            document.getElementById('edit-book-id').value = '';
+            document.getElementById('input-book-name').value = '';
+            document.getElementById('input-book-desc').value = '';
+            await fetchWordbooks();
+        }
+
+        function renderWordbookTable() {
+            const tbody = document.getElementById('book-table-body');
+            tbody.innerHTML = wordbooks.map(b => `
+                <tr class="hover:bg-slate-50 border-b">
+                    <td class="p-2.5 font-semibold text-slate-800">${b.name}</td>
+                    <td class="p-2.5"><span class="text-xs px-2 py-0.5 rounded bg-slate-100 border">${b.level}</span></td>
+                    <td class="p-2.5 text-xs text-slate-500">${b.description || '-'}</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteWordbook('${b.id}')" class="text-xs text-red-600 font-medium">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteWordbook(id) {
+            if (!confirm("确定要删除本词书及关联单词吗？")) return;
+            await db.from('wordbooks').delete().eq('id', id);
+            await fetchWordbooks();
         }
     </script>
 </body>
