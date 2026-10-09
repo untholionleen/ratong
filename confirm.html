@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>仁爱通｜账号确认</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:#172033;background:#f4f7fb}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
+    .card{width:min(100%,520px);background:#fff;border:1px solid #e4eaf2;border-radius:22px;padding:clamp(24px,5vw,42px);box-shadow:0 18px 55px rgba(22,44,77,.08);text-align:center}
+    .mark{width:58px;height:58px;margin:0 auto 18px;border-radius:18px;background:#e7f7f0;color:#087f5b;display:grid;place-items:center;font-size:28px;font-weight:800}
+    h1{font-size:26px;margin:0 0 12px;letter-spacing:.01em}
+    p{color:#5d687b;line-height:1.75;margin:0 0 18px}
+    .status{margin:20px 0;padding:14px;border-radius:12px;background:#f4f7fb;text-align:left;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
+    .actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px}
+    a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:11px;text-decoration:none;font-weight:650}
+    .primary{background:#087f5b;color:#fff}.secondary{border:1px solid #d8e0eb;color:#25334a;background:#fff}
+    .note{font-size:12px;color:#8993a3;margin-top:24px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark" id="mark">✓</div>
+    <h1 id="heading">正在检查账号确认状态</h1>
+    <p id="message">请稍候。如果您刚从确认邮件返回此页面，系统正在读取验证结果。</p>
+    <div class="status" id="details" role="status" aria-live="polite">正在检查链接参数……</div>
+    <div class="actions">
+      <a class="btn primary" id="login" href="./index.html">返回仁爱通登录</a>
+      <a class="btn secondary" href="./index.html">返回首页</a>
+    </div>
+    <div class="note">如果页面提示链接失效，请回到注册邮箱重新发送确认邮件。请勿将确认链接转发给他人。</div>
+  </main>
+  <script>
+    (function () {
+      const heading = document.getElementById('heading');
+      const message = document.getElementById('message');
+      const details = document.getElementById('details');
+      const mark = document.getElementById('mark');
+      const params = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const error = params.get('error_description') || hash.get('error_description');
+      const errorCode = params.get('error') || hash.get('error');
+      const type = hash.get('type') || params.get('type');
+      const accessToken = hash.get('access_token');
+      const code = params.get('code');
+
+      if (error || errorCode) {
+        mark.textContent = '!';
+        heading.textContent = '暂时无法确认账号';
+        message.textContent = '确认链接可能已过期、已使用，或存在配置问题。';
+        details.textContent = '提示：' + (error || errorCode) + '。请返回登录页重新申请确认邮件；如果反复出现，请联系系统管理员检查 Supabase 邮件模板与 Redirect URLs。';
+      } else if (type === 'signup' || type === 'email' || accessToken || code) {
+        heading.textContent = '已收到确认链接';
+        message.textContent = '如果您是通过仁爱通发出的确认邮件进入本页，且页面没有错误提示，请返回网站尝试登录。';
+        details.textContent = '本页面仅显示回跳状态。账号是否真正验证成功，应以 Supabase Authentication 用户记录中的 Email confirmed 状态为准。';
+      } else {
+        heading.textContent = '仁爱通账号确认';
+        message.textContent = '请从注册邮箱打开仁爱通发出的确认邮件链接。';
+        details.textContent = '当前页面没有检测到确认链接参数。您也可以返回网站登录，或重新发送确认邮件。';
+      }
+      // Replace this relative path if the login page uses another route.
+      document.getElementById('login').href = './index.html';
+    })();
+  </script>
+</body>
+</html>
